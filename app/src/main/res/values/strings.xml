@@ -3,4 +3,10 @@
     <string name="title_activity_loading">LoadingActivity</string>
     <string name="title_activity_home">HomeActivity</string>
     <string name="title_activity_gallery">GalleryActivity</string>
+
+    <!-- Описания для кнопок записи маршрута -->
+    <string name="desc_start_route">Начать запись маршрута</string>
+    <string name="desc_pause_route">Пауза записи маршрута</string>
+    <string name="desc_stop_route">Остановить запись маршрута</string>
+    <string name="desc_take_photo">Сделать фото на маршруте</string>
 </resources>
