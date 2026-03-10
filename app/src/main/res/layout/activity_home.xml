@@ -5,36 +5,42 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1a1a1a">
+    android:background="@color/theme2"
+    android:fontFamily="sans-serif">
 
     <!-- Название приложения сверху -->
-    <TextView
-        android:id="@+id/appTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="DrawMap"
-        android:textColor="#FFC107"
-        android:textSize="32sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Карта в центре (контейнер для Google Maps) -->
 
-    <!-- Кнопка начала маршрута (красный круг записи) -->
+    <!-- Кнопка начала маршрута (красный круг записи - акцент) -->
+
+    <TextView
+        android:id="@+id/appTitle"
+        android:layout_width="404dp"
+        android:layout_height="35dp"
+        android:layout_marginTop="48dp"
+        android:fontFamily="sans-serif"
+        android:text="DrawMap"
+        android:textColor="@color/theme1"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.058"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <FrameLayout
         android:id="@+id/contentFrame"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_margin="16dp"
-        android:background="#2d2d2d"
-        app:layout_constraintBottom_toTopOf="@id/startRouteButton"
+        android:background="@color/theme2"
+        app:layout_constraintBottom_toTopOf="@+id/bottomNavigationView"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.454"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/appTitle"
-        app:layout_constraintVertical_bias="0.351" />
+        app:layout_constraintTop_toBottomOf="@+id/appTitle"
+        app:layout_constraintVertical_bias="0.486" />
 
     <Button
         android:id="@+id/startRouteButton"
@@ -44,20 +50,13 @@
         android:layout_marginBottom="28dp"
         android:backgroundTint="#FD0000"
         android:contentDescription="@string/desc_start_route"
-        app:iconTint="#FD0000"
+        app:iconTint="@color/white"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:rippleColor="#FF0000" />
+        app:rippleColor="#FF5252" />
 
     <!-- Кнопка паузы -->
-
-    <!-- Кнопка стоп -->
-
-    <!-- Кнопка фото -->
-
-    <!-- Нижняя навигация -->
-
     <Button
         android:id="@+id/pauseButton"
         android:layout_width="72dp"
@@ -65,14 +64,18 @@
         android:layout_marginEnd="56dp"
         android:layout_marginBottom="28dp"
         android:background="@drawable/button_circle_secondary"
+        android:backgroundTint="@color/theme1"
         android:contentDescription="@string/desc_pause_route"
         android:text="⏸"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/theme2"
         android:textSize="18sp"
+        android:fontFamily="sans-serif"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
-        app:layout_constraintEnd_toStartOf="@id/startRouteButton" />
+        app:layout_constraintEnd_toStartOf="@id/startRouteButton"
+        app:rippleColor="@color/theme2" />
 
+    <!-- Кнопка стоп -->
     <Button
         android:id="@+id/stopButton"
         android:layout_width="72dp"
@@ -80,39 +83,48 @@
         android:layout_marginStart="56dp"
         android:layout_marginBottom="28dp"
         android:background="@drawable/button_circle_secondary"
+        android:backgroundTint="@color/theme1"
         android:contentDescription="@string/desc_stop_route"
         android:text="■"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/theme2"
         android:textSize="18sp"
+        android:fontFamily="sans-serif"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
-        app:layout_constraintStart_toEndOf="@id/startRouteButton" />
+        app:layout_constraintStart_toEndOf="@id/startRouteButton"
+        app:rippleColor="@color/theme2" />
 
+    <!-- Кнопка фото -->
     <Button
         android:id="@+id/photoButton"
         style="@style/Widget.Material3.Button"
         android:layout_width="72dp"
         android:layout_height="72dp"
         android:layout_marginBottom="28dp"
+        android:background="@drawable/button_circle_secondary"
+        android:backgroundTint="@color/theme1"
         android:contentDescription="@string/desc_take_photo"
         android:text="📷"
+        android:textColor="@color/theme2"
         android:textSize="18sp"
+        android:fontFamily="sans-serif"
         android:visibility="gone"
-        android:background="@drawable/button_circle_secondary"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.501"
         app:layout_constraintStart_toStartOf="parent"
-        app:rippleColor="#5F4C4C"
-        app:strokeColor="#6B5959" />
+        app:rippleColor="@color/theme2"
+        app:strokeColor="@color/theme2" />
 
+    <!-- Нижняя навигация -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNavigationView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="#2d2d2d"
-        app:itemIconTint="#FFC107"
-        app:itemTextColor="#FFC107"
+        android:background="@color/theme2"
+        android:fontFamily="sans-serif"
+        app:itemIconTint="@color/theme1"
+        app:itemTextColor="@color/theme1"
         app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
