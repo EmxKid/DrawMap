@@ -1,10 +1,15 @@
 package com.example.drawmap.ui.home
 
+import android.content.Context
+import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.osmdroid.config.Configuration
@@ -12,8 +17,11 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import com.example.drawmap.R
+import com.example.drawmap.di.ServiceLocator
 import com.example.drawmap.ui.navigation.Navigator
+import kotlinx.coroutines.launch
 
 class HomeActivity : AppCompatActivity() {
 
@@ -53,6 +61,43 @@ class HomeActivity : AppCompatActivity() {
 
         // Обработчики кнопок
         setupButtons()
+
+        // Обрабатываем intent: если пришло repeat_route_id — наложим призрачный маршрут
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { handleIntent(it) }
+    }
+
+    private fun isOnline(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val nw = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(nw) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        val repeatId = intent.getStringExtra("repeat_route_id")
+        // show/hide offline placeholder
+        findViewById<android.view.View>(R.id.tvOffline)?.let { placeholder ->
+            placeholder.visibility = if (isOnline()) android.view.View.GONE else android.view.View.VISIBLE
+        }
+
+        if (!repeatId.isNullOrEmpty()) {
+            lifecycleScope.launch {
+                val route = ServiceLocator.routeRepository.getRouteById(repeatId)
+                if (route != null) {
+                    applyGhostRoute(route)
+                    // подготовить ViewModel к повтору
+                    viewModel.prepareForRepeat(route)
+                    Toast.makeText(this@HomeActivity, "Наложен призрачный маршрут: ${route.title}", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@HomeActivity, "Не найден маршрут для повтора", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun setupMap() {
@@ -73,6 +118,28 @@ class HomeActivity : AppCompatActivity() {
             }
             overlays.add(userMarker)
         }
+    }
+
+    private fun applyGhostRoute(route: com.example.drawmap.data.model.Route) {
+        val points = route.coordinates
+        val ghost = Polyline(mapView).apply {
+            setPoints(points)
+            outlinePaint.color = 0x550000FF // полупрозрачный синий
+            outlinePaint.strokeWidth = 6f
+        }
+        mapView.overlays.add(ghost)
+
+        // Маркер старта
+        route.coordinates.firstOrNull()?.let { start ->
+            val startMarker = Marker(mapView).apply {
+                position = start
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                title = "Старт: ${route.title}"
+            }
+            mapView.overlays.add(startMarker)
+        }
+
+        mapView.invalidate()
     }
 
     private fun setupNavigation() {
