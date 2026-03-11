@@ -5,7 +5,7 @@
     <style name="Theme.DrawMap" parent="Theme.MaterialComponents.DayNight.NoActionBar">
 
         <!-- === ЦВЕТОВАЯ СХЕМА === -->
-        <item name="colorPrimary">@color/theme2</item>
+        <item name="colorPrimary">@color/white</item>
         <item name="colorPrimaryVariant">@color/theme2</item>
         <item name="colorOnPrimary">@color/theme1</item>
         <item name="colorSecondary">@color/theme1</item>
@@ -13,8 +13,8 @@
         <item name="colorOnSecondary">@color/theme2</item>
 
         <!-- Фон и текст по умолчанию -->
-        <item name="android:colorBackground">@color/theme2</item>
-        <item name="android:textColorPrimary">@color/theme1</item>
+        <item name="android:colorBackground">@color/white</item>
+        <item name="android:textColorPrimary">@color/theme2</item>
         <item name="android:textColorSecondary">@color/textSecondary</item>
 
         <!-- === ШРИФТЫ === -->
@@ -22,7 +22,7 @@
         <item name="fontFamily">sans-serif</item>
 
         <!-- === ЭЛЕМЕНТЫ ИНТЕРФЕЙСА === -->
-        <item name="android:statusBarColor">@color/theme2</item>
+        <item name="android:statusBarColor">@color/white</item>
         <item name="android:navigationBarColor">@color/theme2</item>
         <item name="cardBackgroundColor">@color/theme1</item>
     </style>
@@ -39,7 +39,7 @@
     <!-- Кнопка по умолчанию -->
     <style name="Button.Default" parent="Widget.MaterialComponents.Button">
         <item name="android:fontFamily">sans-serif</item>
-        <item name="backgroundTint">@color/theme1</item>
+        <item name="backgroundTint">@color/white</item>
         <item name="android:textColor">@color/theme2</item>
         <item name="cornerRadius">12dp</item>
     </style>
