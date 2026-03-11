@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Слой 1: Градиентный фон (имитация размытой карты) -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#1a2332"
+                android:centerColor="#2d3748"
+                android:endColor="#1a2332"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <!-- Слой 2: Полупрозрачный оверлей для текста -->
+    <item android:gravity="center">
+        <shape android:shape="rectangle">
+            <solid android:color="#80000000" />
+            <corners android:radius="16dp" />
+            <padding
+                android:left="24dp"
+                android:top="16dp"
+                android:right="24dp"
+                android:bottom="16dp" />
+        </shape>
+    </item>
+
+</layer-list>
