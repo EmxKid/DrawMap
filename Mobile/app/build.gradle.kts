@@ -71,6 +71,7 @@ dependencies {
 
     // ConstraintLayout
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation(libs.androidx.compose.remote.creation.core)
 
     // Тестирование
     testImplementation("junit:junit:4.13.2")

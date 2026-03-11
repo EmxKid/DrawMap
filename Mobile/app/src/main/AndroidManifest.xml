@@ -17,7 +17,7 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/logo"
         android:label="@string/app_name"
         android:theme="@style/Theme.DrawMap"
         android:usesCleartextTraffic="true"> <!-- Важно для загрузки тайлов по HTTP -->
@@ -36,6 +36,26 @@
         <!-- Home Screen -->
         <activity
             android:name=".ui.home.HomeActivity"
+            android:exported="false" />
+
+        <!-- Gallery Screen (добавлено) -->
+        <activity
+            android:name=".ui.gallery.GalleryActivity"
+            android:exported="false" />
+
+        <!-- Route detail -->
+        <activity
+            android:name=".ui.route.RouteDetailActivity"
+            android:exported="false" />
+
+        <!-- Photo fullscreen -->
+        <activity
+            android:name=".ui.photo.PhotoActivity"
+            android:exported="false" />
+
+        <!-- Route fullscreen -->
+        <activity
+            android:name=".ui.route.RouteFullScreenActivity"
             android:exported="false" />
 
     </application>
