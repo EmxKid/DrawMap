@@ -32,8 +32,7 @@ public class PhotoRepository : IPhotoRepository
             return null;
 
         existing.RouteId = photo.RouteId;
-        existing.Location = photo.Location;
-        existing.Data = photo.Data;
+        existing.LocationId = photo.LocationId;
 
         await _context.SaveChangesAsync();
         return existing;
