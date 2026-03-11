@@ -20,6 +20,8 @@ public class RouteService : IRouteService
         route.Id = Guid.NewGuid().ToString();
         route.Photos ??= [];
         route.Locations ??= [];
+        foreach (var location in route.Locations)
+            location.Id ??= Guid.NewGuid().ToString();
         await _routeRepository.AddRoute(route);
         return route;
     }

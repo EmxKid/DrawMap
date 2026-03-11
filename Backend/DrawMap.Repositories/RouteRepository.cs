@@ -24,6 +24,7 @@ public class RouteRepository : IRouteRepository
     {
         return await _context.Routes
             .Include(r => r.Photos)
+            .Include(r => r.Locations)
             .FirstOrDefaultAsync(r => r.Id == routeId);
     }
 
@@ -31,11 +32,15 @@ public class RouteRepository : IRouteRepository
     {
         var existing = await _context.Routes
             .Include(r => r.Photos)
+            .Include(r => r.Locations)
             .FirstOrDefaultAsync(r => r.Id == routeId);
 
         if (existing is null)
             return null;
 
+        existing.TotalDistance = route.TotalDistance;
+        existing.StartTime = route.StartTime;
+        existing.EndTime = route.EndTime;
         existing.Locations = route.Locations;
         existing.Photos = route.Photos;
 

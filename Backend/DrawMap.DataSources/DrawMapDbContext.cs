@@ -1,8 +1,5 @@
-using System.Text.Json;
 using DrawMap.Domain;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DrawMap.DataSources;
 
@@ -15,25 +12,19 @@ public class DrawMapDbContext : DbContext
 
     public DbSet<Route> Routes => Set<Route>();
     public DbSet<Photo> Photos => Set<Photo>();
+    public DbSet<Location> Locations => Set<Location>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        var locationConverter = new ValueConverter<Location, string>(
-            loc => JsonSerializer.Serialize(loc, (JsonSerializerOptions?)null),
-            json => JsonSerializer.Deserialize<Location>(json, (JsonSerializerOptions?)null));
+        modelBuilder.Entity<Location>(entity =>
+        {
+            entity.HasKey(l => l.Id);
 
-        var locationsConverter = new ValueConverter<Location[]?, string?>(
-            locs => locs == null ? null : JsonSerializer.Serialize(locs, (JsonSerializerOptions?)null),
-            json => json == null ? null : JsonSerializer.Deserialize<Location[]>(json, (JsonSerializerOptions?)null));
-
-        var locationsComparer = new ValueComparer<Location[]?>(
-            (a, b) => JsonSerializer.Serialize(a, (JsonSerializerOptions?)null) ==
-                      JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
-            v => v == null ? 0 : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null).GetHashCode(),
-            v => v == null ? null : JsonSerializer.Deserialize<Location[]>(
-                     JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), (JsonSerializerOptions?)null));
+            entity.Property(l => l.Id)
+                .IsRequired();
+        });
 
         modelBuilder.Entity<Route>(entity =>
         {
@@ -42,11 +33,9 @@ public class DrawMapDbContext : DbContext
             entity.Property(r => r.Id)
                 .IsRequired();
 
-            // Массив Location[] хранится как JSON-колонка
-            entity.Property(r => r.Locations)
-                .HasConversion(locationsConverter!, locationsComparer!)
-                .HasColumnType("jsonb")
-                .IsRequired(false);
+            entity.HasMany(r => r.Locations)
+                .WithOne()
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(r => r.Photos)
                 .WithOne()
@@ -64,12 +53,7 @@ public class DrawMapDbContext : DbContext
             entity.Property(p => p.RouteId)
                 .IsRequired();
 
-            // Location — struct, хранится как JSON-колонка
-            entity.Property(p => p.Location)
-                .HasConversion(locationConverter)
-                .HasColumnType("jsonb");
-
-            entity.Property(p => p.Data)
+            entity.Property(p => p.LocationId)
                 .IsRequired(false);
         });
     }
