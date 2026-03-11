@@ -38,5 +38,25 @@
             android:name=".ui.home.HomeActivity"
             android:exported="false" />
 
+        <!-- Gallery Screen (добавлено) -->
+        <activity
+            android:name=".ui.gallery.GalleryActivity"
+            android:exported="false" />
+
+        <!-- Route detail -->
+        <activity
+            android:name=".ui.route.RouteDetailActivity"
+            android:exported="false" />
+
+        <!-- Photo fullscreen -->
+        <activity
+            android:name=".ui.photo.PhotoActivity"
+            android:exported="false" />
+
+        <!-- Route fullscreen -->
+        <activity
+            android:name=".ui.route.RouteFullScreenActivity"
+            android:exported="false" />
+
     </application>
 </manifest>

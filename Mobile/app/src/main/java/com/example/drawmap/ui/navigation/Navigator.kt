@@ -28,7 +28,8 @@ class Navigator(private val context: Context) {
             else -> return
         }
 
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        // Не очищаем стек по умолчанию — навигация внутри приложения должна сохранять back-stack
+        // intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         context.startActivity(intent)
     }
 
