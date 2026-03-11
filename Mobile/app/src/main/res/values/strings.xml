@@ -3,11 +3,17 @@
     <string name="app_name">DrawMap</string>
     <string name="title_activity_loading">LoadingActivity</string>
     <string name="title_activity_home">HomeActivity</string>
-    <string name="title_activity_gallery">GalleryActivity</string>
+    <string name="title_activity_gallery">Gallery</string>
 
     <!-- Описания для кнопок записи маршрута -->
     <string name="desc_start_route">Начать запись маршрута</string>
     <string name="desc_pause_route">Пауза записи маршрута</string>
     <string name="desc_stop_route">Остановить запись маршрута</string>
     <string name="desc_take_photo">Сделать фото на маршруте</string>
+
+    <!-- Gallery strings -->
+    <string name="gallery_empty">Пока нет сохранённых маршрутов 🗺️</string>
+    <string name="gallery_view">👁 Просмотреть</string>
+    <string name="gallery_back">← На главную</string>
+    <string name="gallery_title">📁 Моя галерея</string>
 </resources>
