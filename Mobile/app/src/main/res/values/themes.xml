@@ -22,9 +22,9 @@
         <item name="fontFamily">sans-serif</item>
 
         <!-- === ЭЛЕМЕНТЫ ИНТЕРФЕЙСА === -->
-        <item name="android:statusBarColor">@color/white</item>
-        <item name="android:navigationBarColor">@color/theme2</item>
-        <item name="cardBackgroundColor">@color/theme1</item>
+        <item name="android:statusBarColor">@color/theme2</item>
+        <item name="android:navigationBarColor">@color/white</item>
+        <item name="cardBackgroundColor">@color/white</item>
     </style>
 
     <!-- === БАЗОВЫЕ СТИЛИ КОМПОНЕНТОВ === -->
@@ -61,7 +61,7 @@
 
     <!-- Карточка (CardView) -->
     <style name="Card.Default" parent="Widget.MaterialComponents.CardView">
-        <item name="cardBackgroundColor">@color/theme1</item>
+        <item name="cardBackgroundColor">@color/white</item>
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">4dp</item>
         <item name="contentPadding">16dp</item>

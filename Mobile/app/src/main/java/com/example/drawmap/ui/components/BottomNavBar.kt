@@ -1,8 +1,9 @@
 package com.example.drawmap.ui.components
 
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.util.AttributeSet
-import android.view.LayoutInflater
 import android.widget.FrameLayout
 import androidx.annotation.IdRes
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -23,9 +24,10 @@ class BottomNavBar @JvmOverloads constructor(
         // Надуваем разметку (создаём BottomNavigationView программно)
         bottomNav = BottomNavigationView(context).apply {
             inflateMenu(R.menu.bottom_nav_menu)
-            setBackgroundColor(context.getColor(R.color.theme2))
-            itemIconTintList = context.getColorStateList(R.color.theme1)
-            itemTextColor = context.getColorStateList(R.color.theme1)
+            setBackgroundColor(context.getColor(R.color.white))
+            itemIconTintList = context.getColorStateList(R.color.theme2)
+            itemTextColor = context.getColorStateList(R.color.theme2)
+            itemActiveIndicatorColor = ColorStateList.valueOf(Color.TRANSPARENT)
             labelVisibilityMode = BottomNavigationView.LABEL_VISIBILITY_LABELED
         }
         addView(bottomNav, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
