@@ -5,19 +5,75 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- 🗺️ Карта OSMDroid на весь экран (фон) -->
+    <!-- 🗺️ Карта OSMDroid на весь экран -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clickable="true"
         android:focusable="true"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 🎯 Кнопка "Моя локация" (плавающая) -->
+    <!-- 🌫️ Overlay: размытый фон + кнопка запроса прав (показывается, если нет разрешения) -->
+    <FrameLayout
+        android:id="@+id/locationPermissionOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/moscow_blur_placeholder"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Контент внутри overlay -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:contentDescription="Геолокация"
+                android:src="@android:drawable/ic_menu_mylocation"
+                app:tint="@color/theme1" />
+
+            <TextView
+                style="@style/Text.Title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="📍 Доступ к локации" />
+
+            <TextView
+                style="@style/Text.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="Разрешите доступ, чтобы видеть свой маршрут на карте" />
+
+            <Button
+                android:id="@+id/btnRequestLocation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="🔓 Разрешить доступ" />
+
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- 🎯 Кнопки (показываются только при наличии разрешения) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabMyLocation"
         android:layout_width="wrap_content"
@@ -25,34 +81,30 @@
         android:layout_margin="16dp"
         android:contentDescription="Моя локация"
         android:src="@android:drawable/ic_menu_mylocation"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:tint="@color/theme2" />
 
-    <!-- 🎯 Кнопка начала записи (плавающая, слева) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabStartRecording"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:contentDescription="Начать запись"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavBar"
         app:layout_constraintStart_toStartOf="parent"
         app:tint="@color/white"
         app:backgroundTint="@color/theme1" />
 
-    <!-- 🧭 Нижняя навигационная панель -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigationView"
+    <!-- 🧭 Нижняя навигация -->
+    <com.example.drawmap.ui.components.BottomNavBar
+        android:id="@+id/bottomNavBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/theme2"
-        app:itemIconTint="@color/theme1"
-        app:itemTextColor="@color/theme1"
-        app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:menu="@menu/bottom_nav_menu" />
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
