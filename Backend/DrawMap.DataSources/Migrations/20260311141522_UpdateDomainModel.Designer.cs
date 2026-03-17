@@ -3,6 +3,7 @@ using System;
 using DrawMap.DataSources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DrawMap.DataSources.Migrations
 {
     [DbContext(typeof(DrawMapDbContext))]
-    partial class DrawMapDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260311141522_UpdateDomainModel")]
+    partial class UpdateDomainModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -39,6 +42,9 @@ namespace DrawMap.DataSources.Migrations
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("VisitFrequency")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RouteId");
@@ -54,10 +60,13 @@ namespace DrawMap.DataSources.Migrations
                     b.Property<string>("LocationId")
                         .HasColumnType("text");
 
+                    b.Property<string>("RouteId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("LocationId")
-                        .IsUnique();
+                    b.HasIndex("RouteId");
 
                     b.ToTable("Photos");
                 });
@@ -91,20 +100,18 @@ namespace DrawMap.DataSources.Migrations
 
             modelBuilder.Entity("DrawMap.Domain.Photo", b =>
                 {
-                    b.HasOne("DrawMap.Domain.Location", null)
-                        .WithOne("Photo")
-                        .HasForeignKey("DrawMap.Domain.Photo", "LocationId");
-                });
-
-            modelBuilder.Entity("DrawMap.Domain.Location", b =>
-                {
-                    b.Navigation("Photo")
+                    b.HasOne("DrawMap.Domain.Route", null)
+                        .WithMany("Photos")
+                        .HasForeignKey("RouteId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("DrawMap.Domain.Route", b =>
                 {
                     b.Navigation("Locations");
+
+                    b.Navigation("Photos");
                 });
 #pragma warning restore 612, 618
         }
