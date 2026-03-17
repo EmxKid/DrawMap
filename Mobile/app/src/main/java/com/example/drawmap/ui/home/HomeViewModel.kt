@@ -21,6 +21,9 @@ class HomeViewModel : ViewModel() {
     val isRepeatMode: LiveData<Boolean> = _isRepeatMode
     // -------------------------
 
+    private val _userLocation = MutableLiveData<GeoPoint?>(null)
+    val userLocation: LiveData<GeoPoint?> = _userLocation
+
     /**
      * Подготовить экран для повтора маршрута (наложение призрака и ожидание старта)
      */
@@ -48,6 +51,10 @@ class HomeViewModel : ViewModel() {
                 onStart()
             }
         }
+    }
+
+    fun updateUserLocation(latitude: Double, longitude: Double) {
+        _userLocation.value = GeoPoint(latitude, longitude)
     }
 
     /**

@@ -4,6 +4,11 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.DashPathEffect
+import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
@@ -15,24 +20,27 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import com.example.drawmap.R
+import com.example.drawmap.data.model.Route
+import com.example.drawmap.di.ServiceLocator
+import com.example.drawmap.ui.components.BottomNavBar
+import com.example.drawmap.ui.navigation.Navigator
+import com.example.drawmap.utils.RouteBuilder
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import com.example.drawmap.R
-import com.example.drawmap.ui.components.BottomNavBar
-import com.example.drawmap.di.ServiceLocator
-import com.example.drawmap.ui.navigation.Navigator
-import kotlinx.coroutines.launch
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 class HomeActivity : AppCompatActivity() {
 
@@ -45,9 +53,12 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var permissionOverlay: FrameLayout
     private lateinit var btnRequestLocation: Button
 
-    // 🔹 FusedLocationProviderClient для получения локации
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var locationCancellationToken = CancellationTokenSource()
+    private lateinit var myLocationOverlay: MyLocationNewOverlay
+
+    // Храним ссылки на оверлеи "призрачного" маршрута для очистки
+    private var ghostOverlays = mutableListOf<Any>()
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
@@ -56,7 +67,6 @@ class HomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 🔧 Инициализация OSMDroid
         Configuration.getInstance().apply {
             load(this@HomeActivity, PreferenceManager.getDefaultSharedPreferences(this@HomeActivity))
             userAgentValue = "${packageName}/1.0"
@@ -64,12 +74,10 @@ class HomeActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_home)
 
-        // Инициализация
         viewModel = ViewModelProvider(this)[HomeViewModel::class.java]
         navigator = Navigator(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // Привязка видов
         mapView = findViewById(R.id.mapView)
         bottomNavBar = findViewById(R.id.bottomNavBar)
         fabMyLocation = findViewById(R.id.fabMyLocation)
@@ -77,13 +85,11 @@ class HomeActivity : AppCompatActivity() {
         permissionOverlay = findViewById(R.id.locationPermissionOverlay)
         btnRequestLocation = findViewById(R.id.btnRequestLocation)
 
-        // Настройка
         setupMap()
         setupNavigation()
         setupButtons()
         setupLocationPermission()
 
-        // Обрабатываем intent: если пришло repeat_route_id — наложим призрачный маршрут
         handleIntent(intent)
     }
 
@@ -101,7 +107,7 @@ class HomeActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent) {
         val repeatId = intent.getStringExtra("repeat_route_id")
-        // show/hide offline placeholder
+
         findViewById<android.view.View>(R.id.tvOffline)?.let { placeholder ->
             placeholder.visibility = if (isOnline()) android.view.View.GONE else android.view.View.VISIBLE
         }
@@ -110,8 +116,8 @@ class HomeActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val route = ServiceLocator.routeRepository.getRouteById(repeatId)
                 if (route != null) {
+                    clearGhostOverlays()
                     applyGhostRoute(route)
-                    // подготовить ViewModel к повтору
                     viewModel.prepareForRepeat(route)
                     Toast.makeText(this@HomeActivity, "Наложен призрачный маршрут: ${route.title}", Toast.LENGTH_SHORT).show()
                 } else {
@@ -127,40 +133,136 @@ class HomeActivity : AppCompatActivity() {
             setMultiTouchControls(true)
             controller.setZoom(15.0)
 
-            // По умолчанию центрируем на Москве (заглушка)
+            myLocationOverlay = MyLocationNewOverlay(mapView)
+            val directionArrow = ContextCompat.getDrawable(this@HomeActivity, R.drawable.ic_marker_blue)
+            if (directionArrow != null) {
+                val bitmap = drawableToBitmap(directionArrow)
+                val personBitmap = android.graphics.BitmapFactory.decodeResource(
+                    resources,
+                    org.osmdroid.library.R.drawable.person
+                )
+                myLocationOverlay.setDirectionArrow(personBitmap, bitmap)
+            }
+            overlays.add(myLocationOverlay)
+
             val moscow = GeoPoint(55.7558, 37.6173)
             controller.setCenter(moscow)
-
-            // Маркер "Вы здесь" (пока тестовый)
-            val userMarker = Marker(this).apply {
-                position = moscow
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "📍 Москва (заглушка)"
-            }
-            overlays.add(userMarker)
         }
+
+            /*lifecycleScope.launch {
+            val routeIds = ServiceLocator.routeRepository.getRouteIdsForUser("user")
+            for (routeId in routeIds) {
+                val route = ServiceLocator.routeRepository.getRouteById(routeId)
+                if (route != null) {
+                    addRouteToMap(route)
+                }
+            }
+        }*/
     }
 
-    private fun applyGhostRoute(route: com.example.drawmap.data.model.Route) {
+    private fun addRouteToMap(route: Route) {
         val points = route.coordinates
-        val ghost = Polyline(mapView).apply {
+        val polyline = Polyline(mapView).apply {
             setPoints(points)
-            outlinePaint.color = 0x550000FF // полупрозрачный синий
-            outlinePaint.strokeWidth = 6f
+            outlinePaint.color = 0x220000FF
+            outlinePaint.strokeWidth = 8f
         }
-        mapView.overlays.add(ghost)
+        mapView.overlays.add(polyline)
 
-        // Маркер старта
-        route.coordinates.firstOrNull()?.let { start ->
-            val startMarker = Marker(mapView).apply {
-                position = start
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Старт: ${route.title}"
+        val startMarker = Marker(mapView).apply {
+            position = points.first()
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "Старт: ${route.title}"
+        }
+        val endMarker = Marker(mapView).apply {
+            position = points.last()
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "Финиш: ${route.title}"
+        }
+        mapView.overlays.addAll(listOf(startMarker, endMarker))
+
+        mapView.invalidate()
+    }
+
+    private fun applyGhostRoute(route: Route) {
+        val points = route.coordinates
+        if (points.isEmpty()) return
+
+        // 🔵 1. Рисуем сам выбранный маршрут (фиолетовый, без маркера в конце)
+        val routePolyline = Polyline(mapView).apply {
+            setPoints(points)
+            outlinePaint.color = Color.parseColor("#7C4DFF")
+            outlinePaint.strokeWidth = 8f
+            outlinePaint.isAntiAlias = true
+        }
+        mapView.overlays.add(routePolyline)
+        ghostOverlays.add(routePolyline)
+
+        val startMarker = Marker(mapView).apply {
+            position = points.first()
+            // Точка якоря: (0.5, 1.0) = центр снизу
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "🚩 Старт: ${route.title}"
+            val greenMarker = ContextCompat.getDrawable(this@HomeActivity, R.drawable.ic_marker_green)
+            if (greenMarker != null) {
+                icon = greenMarker
             }
-            mapView.overlays.add(startMarker)
+            // Дополнительная точность
+            setInfoWindow(null) // Убираем всплывающее окно если мешает
+        }
+        mapView.overlays.add(startMarker)
+        ghostOverlays.add(startMarker)
+
+        // 🟡 3. Рисуем путь от текущей локации до старта маршрута
+        requestCurrentLocation { userLocation ->
+            drawPathToStart(userLocation, points.first())
         }
 
         mapView.invalidate()
+    }
+
+    private fun drawPathToStart(from: GeoPoint, to: GeoPoint) {
+        // 🔥 Используем OSRM для построения маршрута по дорогам
+        RouteBuilder.buildRouteAlongRoads(from, to) { routePoints ->
+            if (routePoints != null && routePoints.isNotEmpty()) {
+                // ✅ Маршрут по дорогам получен
+                val pathPolyline = Polyline(mapView).apply {
+                    setPoints(routePoints)
+                    outlinePaint.apply {
+                        color = Color.parseColor("#FFEB3B")
+                        strokeWidth = 8f
+                        isAntiAlias = true
+                        pathEffect = DashPathEffect(floatArrayOf(30f, 15f), 0f)
+                        alpha = 255
+                    }
+                }
+                mapView.overlays.add(pathPolyline)
+                ghostOverlays.add(pathPolyline)
+            } else {
+                // ❌ OSRM не ответил — рисуем прямую линию (fallback)
+                val pathPoints = listOf(from, to)
+                val pathPolyline = Polyline(mapView).apply {
+                    setPoints(pathPoints)
+                    outlinePaint.apply {
+                        color = Color.parseColor("#FFEB3B")
+                        strokeWidth = 8f
+                        isAntiAlias = true
+                        pathEffect = DashPathEffect(floatArrayOf(30f, 15f), 0f)
+                        alpha = 255
+                    }
+                }
+                mapView.overlays.add(pathPolyline)
+                ghostOverlays.add(pathPolyline)
+            }
+            mapView.invalidate()
+        }
+    }
+
+    private fun clearGhostOverlays() {
+        ghostOverlays.forEach { overlay ->
+            mapView.overlays.remove(overlay)
+        }
+        ghostOverlays.clear()
     }
 
     private fun setupNavigation() {
@@ -173,7 +275,7 @@ class HomeActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_heatmap -> {
-                    Toast.makeText(this, "🔥 Heatmap (заглушка)", Toast.LENGTH_SHORT).show()
+                    navigator.navigateTo(Navigator.SCREEN_HEATMAP)
                     true
                 }
                 else -> false
@@ -182,7 +284,6 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        // Кнопка "Моя локация" — работает только при наличии разрешения
         fabMyLocation.setOnClickListener {
             requestCurrentLocation { geoPoint ->
                 mapView.controller.animateTo(geoPoint, 15.0, 500)
@@ -190,7 +291,6 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
-        // Кнопка "Начать запись"
         fabStartRecording.setOnClickListener {
             if (hasLocationPermission()) {
                 viewModel.onStartRecordingClick {
@@ -203,22 +303,22 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    // 🔐 Логика работы с разрешениями
     private fun setupLocationPermission() {
         if (hasLocationPermission()) {
-            // ✅ Разрешение есть — показываем карту и кнопки
             hidePermissionOverlay()
             enableMapControls(true)
+            myLocationOverlay.enableMyLocation()
+            myLocationOverlay.enableFollowLocation()
             requestCurrentLocation { geoPoint ->
                 centerMapOnUser(geoPoint)
             }
         } else {
-            // ❌ Разрешения нет — показываем заглушку
             showPermissionOverlay()
             enableMapControls(false)
+            myLocationOverlay.disableMyLocation()
+            myLocationOverlay.disableFollowLocation()
         }
 
-        // Обработчик кнопки "Разрешить доступ"
         btnRequestLocation.setOnClickListener {
             requestLocationPermission()
         }
@@ -253,26 +353,24 @@ class HomeActivity : AppCompatActivity() {
             val granted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
 
             if (granted) {
-                // ✅ Пользователь дал разрешение
                 Toast.makeText(this, "🎉 Доступ к локации разрешён", Toast.LENGTH_SHORT).show()
                 hidePermissionOverlay()
                 enableMapControls(true)
+                myLocationOverlay.enableMyLocation()
+                myLocationOverlay.enableFollowLocation()
                 requestCurrentLocation { geoPoint ->
                     centerMapOnUser(geoPoint)
                 }
             } else {
-                // ❌ Пользователь отклонил
                 Toast.makeText(
                     this,
                     "⚠️ Без локации карта будет показывать Москву",
                     Toast.LENGTH_LONG
                 ).show()
-                // Не скрываем overlay — пользователь может попробовать снова
             }
         }
     }
 
-    // 📍 Получение текущей локации
     private fun requestCurrentLocation(onLocationReceived: (GeoPoint) -> Unit) {
         if (!hasLocationPermission()) {
             showPermissionOverlay()
@@ -286,40 +384,24 @@ class HomeActivity : AppCompatActivity() {
             ).addOnSuccessListener { location ->
                 if (location != null) {
                     val geoPoint = GeoPoint(location.latitude, location.longitude)
+                    viewModel.updateUserLocation(location.latitude, location.longitude)
                     onLocationReceived(geoPoint)
                 } else {
-                    // Локация не получена — используем заглушку
                     Toast.makeText(this, "📡 Не удалось получить локацию", Toast.LENGTH_SHORT).show()
                 }
             }.addOnFailureListener {
                 Toast.makeText(this, "❌ Ошибка получения локации", Toast.LENGTH_SHORT).show()
             }
         } catch (e: SecurityException) {
-            // На всякий случай — если разрешение отозвали
             showPermissionOverlay()
         }
     }
 
-    // 🎯 Центрирование карты на пользователе
     private fun centerMapOnUser(geoPoint: GeoPoint) {
-        // Убираем старый маркер (если есть)
-        val oldMarker = mapView.overlays.firstOrNull { it is Marker && it.title?.contains("Вы здесь") == true }
-        if (oldMarker != null) mapView.overlays.remove(oldMarker)
-
-        // Добавляем новый маркер
-        val userMarker = Marker(mapView).apply {
-            position = geoPoint
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "📍 Вы здесь"
-        }
-        mapView.overlays.add(userMarker)
-
-        // Анимация перехода
         mapView.controller.animateTo(geoPoint, 15.0, 500)
         mapView.invalidate()
     }
 
-    // 👁 Показ/скрытие overlay
     private fun showPermissionOverlay() {
         permissionOverlay.visibility = FrameLayout.VISIBLE
         fabMyLocation.visibility = FloatingActionButton.GONE
@@ -332,21 +414,21 @@ class HomeActivity : AppCompatActivity() {
         fabStartRecording.visibility = FloatingActionButton.VISIBLE
     }
 
-    // 🔘 Включение/отключение элементов карты
     private fun enableMapControls(enabled: Boolean) {
         mapView.isClickable = enabled
         mapView.setMultiTouchControls(enabled)
     }
 
-    // 🔁 Жизненный цикл OSMDroid
     override fun onResume() {
         super.onResume()
         mapView.onResume()
+        myLocationOverlay.onResume()
 
-        // Если разрешение появилось (например, в настройках), обновляем UI
         if (hasLocationPermission() && permissionOverlay.visibility == FrameLayout.VISIBLE) {
             hidePermissionOverlay()
             enableMapControls(true)
+            myLocationOverlay.enableMyLocation()
+            myLocationOverlay.enableFollowLocation()
             requestCurrentLocation { geoPoint ->
                 centerMapOnUser(geoPoint)
             }
@@ -355,16 +437,28 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        myLocationOverlay.onPause()
         mapView.onPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        //mapView.onDestroy()
-        locationCancellationToken.cancel() // Отменяем запрос локации
+        locationCancellationToken.cancel()
         Configuration.getInstance().save(
             this,
             PreferenceManager.getDefaultSharedPreferences(this)
         )
+    }
+
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
     }
 }
