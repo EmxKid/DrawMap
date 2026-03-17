@@ -1,31 +1,39 @@
 package com.example.drawmap.ui.home
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.drawmap.data.model.Route
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
-import com.example.drawmap.data.model.Route
 
+/**
+ * ViewModel для главного экрана с картой
+ * Управляет состоянием записи маршрута и режимом повтора
+ */
 class HomeViewModel : ViewModel() {
 
-    private var isRecording = false
+    // Состояние записи маршрута
+    private val _recordingState = MutableStateFlow<RecordingState>(RecordingState.Idle)
+    val recordingState: StateFlow<RecordingState> = _recordingState.asStateFlow()
+    
     private val recordedPoints = mutableListOf<GeoPoint>()
 
-    // --- repeat mode state ---
-    private val _repeatRoute = MutableLiveData<Route?>(null)
-    val repeatRoute: LiveData<Route?> = _repeatRoute
+    // Режим повтора маршрута
+    private val _repeatRoute = MutableStateFlow<Route?>(null)
+    val repeatRoute: StateFlow<Route?> = _repeatRoute.asStateFlow()
 
-    private val _isRepeatMode = MutableLiveData<Boolean>(false)
-    val isRepeatMode: LiveData<Boolean> = _isRepeatMode
-    // -------------------------
+    private val _isRepeatMode = MutableStateFlow(false)
+    val isRepeatMode: StateFlow<Boolean> = _isRepeatMode.asStateFlow()
 
-    private val _userLocation = MutableLiveData<GeoPoint?>(null)
-    val userLocation: LiveData<GeoPoint?> = _userLocation
+    // Текущее местоположение пользователя
+    private val _userLocation = MutableStateFlow<GeoPoint?>(null)
+    val userLocation: StateFlow<GeoPoint?> = _userLocation.asStateFlow()
 
     /**
-     * Подготовить экран для повтора маршрута (наложение призрака и ожидание старта)
+     * Подготовить экран для повтора маршрута
      */
     fun prepareForRepeat(route: Route) {
         _repeatRoute.value = route
@@ -43,37 +51,99 @@ class HomeViewModel : ViewModel() {
     /**
      * Запуск записи маршрута
      */
+    fun startRecording() {
+        if (_recordingState.value !is RecordingState.Recording) {
+            _recordingState.value = RecordingState.Recording
+            recordedPoints.clear()
+        }
+    }
+    
+    /**
+     * Запуск записи маршрута (старый API для совместимости)
+     */
     fun onStartRecordingClick(onStart: () -> Unit) {
-        if (!isRecording) {
-            isRecording = true
-            viewModelScope.launch {
-                // TODO: Запуск GPS-трекинга
-                onStart()
-            }
+        if (_recordingState.value !is RecordingState.Recording) {
+            _recordingState.value = RecordingState.Recording
+            recordedPoints.clear()
+            onStart()
+        }
+    }
+    
+    /**
+     * Пауза записи маршрута
+     */
+    fun pauseRecording() {
+        if (_recordingState.value is RecordingState.Recording) {
+            _recordingState.value = RecordingState.Paused(recordedPoints.size)
+        }
+    }
+    
+    /**
+     * Возобновление записи маршрута
+     */
+    fun resumeRecording() {
+        if (_recordingState.value is RecordingState.Paused) {
+            _recordingState.value = RecordingState.Recording
         }
     }
 
+    /**
+     * Остановка записи маршрута
+     */
+    fun stopRecording(): List<GeoPoint> {
+        val points = recordedPoints.toList()
+        _recordingState.value = RecordingState.Completed(points.size)
+        recordedPoints.clear()
+        return points
+    }
+
+    /**
+     * Добавление точки в записываемый маршрут
+     */
+    fun addPoint(point: GeoPoint) {
+        if (_recordingState.value is RecordingState.Recording) {
+            recordedPoints.add(point)
+        }
+    }
+    
+    /**
+     * Добавление точки по координатам
+     */
+    fun addPoint(latitude: Double, longitude: Double) {
+        addPoint(GeoPoint(latitude, longitude))
+    }
+
+    /**
+     * Обновление текущего местоположения пользователя
+     */
     fun updateUserLocation(latitude: Double, longitude: Double) {
         _userLocation.value = GeoPoint(latitude, longitude)
     }
-
+    
     /**
-     * Остановка записи
+     * Обновление местоположения из GeoPoint
      */
-    fun stopRecording() {
-        isRecording = false
-        recordedPoints.clear()
+    fun updateUserLocation(location: GeoPoint) {
+        _userLocation.value = location
     }
 
     /**
-     * Добавление точки в маршрут (для будущего GPS-трекинга)
+     * Получить количество записанных точек
      */
-    fun addPoint(latitude: Double, longitude: Double) {
-        recordedPoints.add(GeoPoint(latitude, longitude))
-    }
+    fun getRecordedPointsCount(): Int = recordedPoints.size
+    
+    /**
+     * Проверить, идет ли запись
+     */
+    fun isRecordingActive(): Boolean = _recordingState.value is RecordingState.Recording
 
     /**
-     * Статус записи
+     * Состояния записи маршрута
      */
-    fun isRecordingActive(): Boolean = isRecording
+    sealed class RecordingState {
+        object Idle : RecordingState()
+        object Recording : RecordingState()
+        data class Paused(val pointsRecorded: Int) : RecordingState()
+        data class Completed(val totalPoints: Int) : RecordingState()
+    }
 }

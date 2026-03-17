@@ -75,7 +75,7 @@ class HeatmapActivity : AppCompatActivity() {
 
     private fun loadMockHeatmapData() {
         lifecycleScope.launch {
-            val visitPoints = ServiceLocator.heatmapRepository.getHeatmapData()
+            val visitPoints = ServiceLocator.provideHeatmapRepository().getHeatmapData()
             heatmapOverlay.setPoints(visitPoints)
             mapView.invalidate()
 

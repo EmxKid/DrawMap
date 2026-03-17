@@ -13,8 +13,10 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,6 +25,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.example.drawmap.R
 import com.example.drawmap.data.model.Route
+import com.example.drawmap.di.AppModeManager
 import com.example.drawmap.di.ServiceLocator
 import com.example.drawmap.ui.components.BottomNavBar
 import com.example.drawmap.ui.navigation.Navigator
@@ -32,7 +35,9 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -41,6 +46,8 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.toColorInt
 
 class HomeActivity : AppCompatActivity() {
 
@@ -52,12 +59,13 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var fabStartRecording: FloatingActionButton
     private lateinit var permissionOverlay: FrameLayout
     private lateinit var btnRequestLocation: Button
+    private lateinit var connectionStatusCard: MaterialCardView
+    private lateinit var connectionStatusText: TextView
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var locationCancellationToken = CancellationTokenSource()
     private lateinit var myLocationOverlay: MyLocationNewOverlay
 
-    // Храним ссылки на оверлеи "призрачного" маршрута для очистки
     private var ghostOverlays = mutableListOf<Any>()
 
     companion object {
@@ -84,11 +92,14 @@ class HomeActivity : AppCompatActivity() {
         fabStartRecording = findViewById(R.id.fabStartRecording)
         permissionOverlay = findViewById(R.id.locationPermissionOverlay)
         btnRequestLocation = findViewById(R.id.btnRequestLocation)
+        connectionStatusCard = findViewById(R.id.connectionStatusCard)
+        connectionStatusText = findViewById(R.id.connectionStatusText)
 
         setupMap()
         setupNavigation()
         setupButtons()
         setupLocationPermission()
+        setupConnectionStatusObserver()
 
         handleIntent(intent)
     }
@@ -99,7 +110,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun isOnline(): Boolean {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val nw = cm.activeNetwork ?: return false
         val caps = cm.getNetworkCapabilities(nw) ?: return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -108,8 +119,8 @@ class HomeActivity : AppCompatActivity() {
     private fun handleIntent(intent: Intent) {
         val repeatId = intent.getStringExtra("repeat_route_id")
 
-        findViewById<android.view.View>(R.id.tvOffline)?.let { placeholder ->
-            placeholder.visibility = if (isOnline()) android.view.View.GONE else android.view.View.VISIBLE
+        findViewById<View>(R.id.tvOffline)?.let { placeholder ->
+            placeholder.visibility = if (isOnline()) View.GONE else View.VISIBLE
         }
 
         if (!repeatId.isNullOrEmpty()) {
@@ -148,50 +159,15 @@ class HomeActivity : AppCompatActivity() {
             val moscow = GeoPoint(55.7558, 37.6173)
             controller.setCenter(moscow)
         }
-
-            /*lifecycleScope.launch {
-            val routeIds = ServiceLocator.routeRepository.getRouteIdsForUser("user")
-            for (routeId in routeIds) {
-                val route = ServiceLocator.routeRepository.getRouteById(routeId)
-                if (route != null) {
-                    addRouteToMap(route)
-                }
-            }
-        }*/
-    }
-
-    private fun addRouteToMap(route: Route) {
-        val points = route.coordinates
-        val polyline = Polyline(mapView).apply {
-            setPoints(points)
-            outlinePaint.color = 0x220000FF
-            outlinePaint.strokeWidth = 8f
-        }
-        mapView.overlays.add(polyline)
-
-        val startMarker = Marker(mapView).apply {
-            position = points.first()
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Старт: ${route.title}"
-        }
-        val endMarker = Marker(mapView).apply {
-            position = points.last()
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Финиш: ${route.title}"
-        }
-        mapView.overlays.addAll(listOf(startMarker, endMarker))
-
-        mapView.invalidate()
     }
 
     private fun applyGhostRoute(route: Route) {
         val points = route.coordinates
         if (points.isEmpty()) return
 
-        // 🔵 1. Рисуем сам выбранный маршрут (фиолетовый, без маркера в конце)
         val routePolyline = Polyline(mapView).apply {
             setPoints(points)
-            outlinePaint.color = Color.parseColor("#7C4DFF")
+            outlinePaint.color = "#7C4DFF".toColorInt()
             outlinePaint.strokeWidth = 8f
             outlinePaint.isAntiAlias = true
         }
@@ -200,20 +176,17 @@ class HomeActivity : AppCompatActivity() {
 
         val startMarker = Marker(mapView).apply {
             position = points.first()
-            // Точка якоря: (0.5, 1.0) = центр снизу
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             title = "🚩 Старт: ${route.title}"
             val greenMarker = ContextCompat.getDrawable(this@HomeActivity, R.drawable.ic_marker_green)
             if (greenMarker != null) {
                 icon = greenMarker
             }
-            // Дополнительная точность
-            setInfoWindow(null) // Убираем всплывающее окно если мешает
+            setInfoWindow(null)
         }
         mapView.overlays.add(startMarker)
         ghostOverlays.add(startMarker)
 
-        // 🟡 3. Рисуем путь от текущей локации до старта маршрута
         requestCurrentLocation { userLocation ->
             drawPathToStart(userLocation, points.first())
         }
@@ -222,14 +195,12 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun drawPathToStart(from: GeoPoint, to: GeoPoint) {
-        // 🔥 Используем OSRM для построения маршрута по дорогам
         RouteBuilder.buildRouteAlongRoads(from, to) { routePoints ->
             if (routePoints != null && routePoints.isNotEmpty()) {
-                // ✅ Маршрут по дорогам получен
                 val pathPolyline = Polyline(mapView).apply {
                     setPoints(routePoints)
                     outlinePaint.apply {
-                        color = Color.parseColor("#FFEB3B")
+                        color = "#FFEB3B".toColorInt()
                         strokeWidth = 8f
                         isAntiAlias = true
                         pathEffect = DashPathEffect(floatArrayOf(30f, 15f), 0f)
@@ -239,7 +210,6 @@ class HomeActivity : AppCompatActivity() {
                 mapView.overlays.add(pathPolyline)
                 ghostOverlays.add(pathPolyline)
             } else {
-                // ❌ OSRM не ответил — рисуем прямую линию (fallback)
                 val pathPoints = listOf(from, to)
                 val pathPolyline = Polyline(mapView).apply {
                     setPoints(pathPoints)
@@ -451,14 +421,22 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
-        val bitmap = Bitmap.createBitmap(
-            drawable.intrinsicWidth,
-            drawable.intrinsicHeight,
-            Bitmap.Config.ARGB_8888
-        )
+        val bitmap = createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         return bitmap
+    }
+    private fun setupConnectionStatusObserver() {
+        lifecycleScope.launch {
+            AppModeManager.isOnlineMode.collect { isOnline ->
+                if (!isOnline) {
+                    connectionStatusCard.visibility = View.VISIBLE
+                    connectionStatusText.text = AppModeManager.getStatusMessage()
+                } else {
+                    connectionStatusCard.visibility = View.GONE
+                }
+            }
+        }
     }
 }

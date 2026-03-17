@@ -1,7 +1,8 @@
-package com.example.drawmap.data.repository
+package com.example.drawmap.data.repository.mock
 
 import com.example.drawmap.R
 import com.example.drawmap.data.model.Route
+import com.example.drawmap.data.repository.RouteRepository
 import org.osmdroid.util.GeoPoint
 import kotlinx.coroutines.delay
 
@@ -39,9 +40,8 @@ class MockRouteRepository : RouteRepository {
         val r2dist = computeDistance(r2Points)
         val r3dist = computeDistance(r3Points)
 
-        // mock duration: assuming average 5 km/h -> 1.388... m/s
         fun estDurationForMeters(meters: Double): Long {
-            val speed = 1.3888889 // m/s (~5 km/h)
+            val speed = 1.3888889
             return (meters / speed).toLong()
         }
 
