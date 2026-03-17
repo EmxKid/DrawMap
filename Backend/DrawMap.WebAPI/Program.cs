@@ -13,8 +13,9 @@ builder.Services.AddDbContext<DrawMapDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IRouteRepository, RouteRepository>();
-builder.Services.AddScoped<IPhotoRepository, PhotoRepository>();
+builder.Services.AddScoped<ILocationRepositories, LocationRepositories>();
 builder.Services.AddScoped<IRouteService, RouteService>();
+builder.Services.AddScoped<IHeatMapService, HeatMapService>();
 
 var app = builder.Build();
 
