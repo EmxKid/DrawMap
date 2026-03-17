@@ -117,6 +117,47 @@
         app:tint="@color/white"
         app:backgroundTint="@color/theme1" />
 
+    <!-- 📡 Плашка статуса подключения -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/connectionStatusCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="#FFF3CD"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚠️"
+                android:textSize="20sp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/connectionStatusText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Приложение работает в офлайн режиме"
+                android:textColor="#856404"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- 🧭 Нижняя навигация -->
     <com.example.drawmap.ui.components.BottomNavBar
         android:id="@+id/bottomNavBar"

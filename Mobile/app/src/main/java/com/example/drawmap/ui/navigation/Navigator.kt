@@ -19,8 +19,6 @@ class Navigator(private val context: Context) {
         const val SCREEN_PHOTO = "photo"
     }
 
-
-
     fun navigateTo(screen: String) {
         val intent = when (screen) {
             SCREEN_HOME -> Intent(context, HomeActivity::class.java)
@@ -34,15 +32,6 @@ class Navigator(private val context: Context) {
             else -> return
         }
 
-        // Не очищаем стек по умолчанию — навигация внутри приложения должна сохранять back-stack
-        // intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         context.startActivity(intent)
-    }
-
-
-
-    fun goBack() {
-        // Для Activity: finish() вызывается из самой Activity
-        // Этот метод можно использовать для Fragment-навигации позже
     }
 }

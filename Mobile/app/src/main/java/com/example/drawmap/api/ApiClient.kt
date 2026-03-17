@@ -1,26 +1,40 @@
 package com.example.drawmap.api
 
+import com.example.drawmap.config.AppConfig
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    // В эмуляторе Android localhost компьютера доступен по адресу 10.0.2.2
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    @Volatile
+    private var currentBaseUrl: String = AppConfig.Api.DEFAULT_BASE_URL
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (AppConfig.Logging.ENABLE_HTTP_LOGGING) {
+            HttpLoggingInterceptor.Level.BODY
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
     }
 
-    private val client = OkHttpClient.Builder()
+    private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
+        .connectTimeout(AppConfig.Api.CONNECT_TIMEOUT, TimeUnit.MILLISECONDS)
+        .readTimeout(AppConfig.Api.READ_TIMEOUT, TimeUnit.MILLISECONDS)
+        .writeTimeout(AppConfig.Api.WRITE_TIMEOUT, TimeUnit.MILLISECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
-    val retrofit: Retrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(client)
+    private val retrofit: Retrofit by lazy {
+        createRetrofit(currentBaseUrl)
+    }
+
+    private fun createRetrofit(baseUrl: String): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

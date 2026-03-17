@@ -9,12 +9,6 @@ import kotlin.concurrent.thread
 
 object RouteBuilder {
 
-    /**
-     * Построить маршрут по дорогам через OSRM API
-     * @param from Начальная точка
-     * @param to Конечная точка
-     * @param callback Результат (список точек маршрута)
-     */
     fun buildRouteAlongRoads(
         from: GeoPoint,
         to: GeoPoint,
@@ -54,9 +48,6 @@ object RouteBuilder {
         }
     }
 
-    /**
-     * Парсинг ответа OSRM (упрощённый)
-     */
     private fun parseOSRMResponse(response: String): List<GeoPoint> {
         val points = mutableListOf<GeoPoint>()
 

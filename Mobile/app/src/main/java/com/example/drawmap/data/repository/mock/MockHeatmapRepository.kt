@@ -1,5 +1,6 @@
-package com.example.drawmap.data.repository
+package com.example.drawmap.data.repository.mock
 
+import com.example.drawmap.data.repository.HeatmapRepository
 import com.example.drawmap.ui.heatmap.HeatmapPoint
 import org.osmdroid.util.GeoPoint
 
@@ -8,9 +9,6 @@ class MockHeatmapRepository : HeatmapRepository {
     override suspend fun getHeatmapData(): List<HeatmapPoint> {
         val points = mutableListOf<HeatmapPoint>()
 
-        // 🔽 ЕЩЁ МЕНЬШЕ ТОЧЕК - всего 15 вместо 40
-
-        // Кластер 1: Красная площадь (5 точек)
         for (i in 0..4) {
             points.add(HeatmapPoint(
                 location = GeoPoint(
@@ -22,7 +20,6 @@ class MockHeatmapRepository : HeatmapRepository {
             ))
         }
 
-        // Кластер 2: Парк Горького (4 точки)
         for (i in 0..3) {
             points.add(HeatmapPoint(
                 location = GeoPoint(
@@ -34,7 +31,6 @@ class MockHeatmapRepository : HeatmapRepository {
             ))
         }
 
-        // Кластер 3: ВДНХ (3 точки)
         for (i in 0..2) {
             points.add(HeatmapPoint(
                 location = GeoPoint(
@@ -46,7 +42,6 @@ class MockHeatmapRepository : HeatmapRepository {
             ))
         }
 
-        // Кластер 4: Арбат (3 точки)
         for (i in 0..2) {
             points.add(HeatmapPoint(
                 location = GeoPoint(
@@ -58,6 +53,6 @@ class MockHeatmapRepository : HeatmapRepository {
             ))
         }
 
-        return points // Всего 15 точек
+        return points
     }
 }
