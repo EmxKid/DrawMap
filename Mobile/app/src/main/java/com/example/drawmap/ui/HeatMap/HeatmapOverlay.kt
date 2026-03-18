@@ -5,23 +5,24 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Overlay
+import androidx.core.graphics.createBitmap
 
 class HeatmapOverlay(mapView: MapView) : Overlay() {
 
     private var points: List<HeatmapPoint> = emptyList()
 
     // НАСТРОЙКИ ВИЗУАЛА
-    private val baseRadius = 40f
-    private val intensityMultiplier = 0.8f
+    private val baseRadius = 60f  // Увеличен радиус для более заметных зон
+    private val intensityMultiplier = 1.2f
 
-    // ПРОЗРАЧНЫЙ ГРАДИЕНТ
+    // ГРАДИЕНТ ОТ ЗЕЛЕНОГО (редкие) К КРАСНОМУ (частые)
     private val gradientColors = intArrayOf(
-        Color.argb(0, 255, 255, 255),
-        Color.argb(60, 0, 255, 255),
-        Color.argb(90, 0, 255, 0),
-        Color.argb(120, 255, 255, 0),
-        Color.argb(150, 255, 100, 0),
-        Color.argb(180, 255, 0, 0)
+        Color.argb(0, 0, 255, 0),      // Прозрачный (края)
+        Color.argb(100, 0, 255, 0),    // Зеленый полупрозрачный (редко посещаемые)
+        Color.argb(140, 100, 255, 0),  // Желто-зеленый
+        Color.argb(170, 255, 255, 0),  // Желтый (средняя посещаемость)
+        Color.argb(200, 255, 150, 0),  // Оранжевый
+        Color.argb(230, 255, 0, 0)     // Красный (часто посещаемые)
     )
     private val gradientPositions = floatArrayOf(0f, 0.2f, 0.4f, 0.6f, 0.8f, 1f)
 
@@ -79,7 +80,7 @@ class HeatmapOverlay(mapView: MapView) : Overlay() {
     }
 
     private fun renderHeatmapSimple(projection: Projection, width: Int, height: Int): Bitmap {
-        val heatmapBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val heatmapBitmap = createBitmap(width, height)
         val canvas = Canvas(heatmapBitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -115,8 +116,12 @@ class HeatmapOverlay(mapView: MapView) : Overlay() {
     }
 }
 
+/**
+ * Точка тепловой карты
+ * @param location координаты точки
+ * @param intensity интенсивность посещения (0.0 - 1.0), основана на visitFrequency
+ */
 data class HeatmapPoint(
     val location: GeoPoint,
-    val intensity: Float = 1.0f,
-    val timestamp: Long? = null
+    val intensity: Float = 1.0f
 )

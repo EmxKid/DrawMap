@@ -1,4 +1,4 @@
-package com.example.drawmap.ui.gallery
+package com.example.drawmap.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

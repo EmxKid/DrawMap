@@ -1,4 +1,4 @@
-package com.example.drawmap.ui.splash
+package com.example.drawmap.viewModel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel

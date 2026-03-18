@@ -15,11 +15,11 @@ class ApiHeatmapRepository : HeatmapRepository {
             val heatMapDtos = apiService.getHeatMap()
             
             // Маппинг DTO -> HeatmapPoint
+            // Используем только visitFrequency для intensity
             heatMapDtos.map { dto ->
                 HeatmapPoint(
                     location = GeoPoint(dto.location.latitude, dto.location.longitude),
-                    intensity = dto.visitFrequency.toFloat(),
-                    timestamp = null
+                    intensity = dto.visitFrequency.toFloat()
                 )
             }
         } catch (e: Exception) {
@@ -33,11 +33,11 @@ class ApiHeatmapRepository : HeatmapRepository {
             val heatMapDtos = apiService.getHeatMap()
             
             // Маппинг DTO -> HeatmapPoint
+            // Используем только visitFrequency для intensity
             heatMapDtos.map { dto ->
                 HeatmapPoint(
                     location = GeoPoint(dto.location.latitude, dto.location.longitude),
-                    intensity = dto.visitFrequency.toFloat(),
-                    timestamp = null
+                    intensity = dto.visitFrequency.toFloat()
                 )
             }
         }

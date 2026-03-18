@@ -21,6 +21,8 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import androidx.core.graphics.toColorInt
+import com.example.drawmap.utils.NetworkConnectivityChecker
+import com.example.drawmap.viewModel.RouteDetailViewModel
 
 /**
  * Activity для отображения деталей маршрута
@@ -69,14 +71,10 @@ class RouteDetailActivity : BaseActivity() {
         setupButtons()
 
         // Загрузка маршрута
-        val routeId = intent.getStringExtra(UiConstants.IntentKeys.ROUTE_ID)
-        if (routeId != null) {
-            viewModel.loadRoute(routeId)
-        } else {
-            showError("ID маршрута не указан")
-            finish()
-        }
+        loadRoute()
     }
+
+
 
     private fun initViews() {
         mapView = findViewById(R.id.mapViewDetail)
@@ -86,7 +84,6 @@ class RouteDetailActivity : BaseActivity() {
     }
 
     private fun setupMap() {
-        // Всегда показываем карту и fallback
         tvOffline.visibility = android.view.View.GONE
         mapView.visibility = android.view.View.VISIBLE
         ivFallback.visibility = android.view.View.VISIBLE
@@ -98,22 +95,19 @@ class RouteDetailActivity : BaseActivity() {
             controller.setZoom(UiConstants.Map.DEFAULT_ZOOM)
         }
         
-        // Показываем предупреждение если нет интернета
-        if (!hasInternetConnection()) {
+        if (!NetworkConnectivityChecker.hasInternetConnection(this)) {
             showMessage("⚠️ Нет интернета. Тайлы карты могут не загрузиться")
         }
     }
-    
-    /**
-     * Проверяет наличие интернет соединения (для загрузки тайлов карты)
-     */
-    private fun hasInternetConnection(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
-            ?: return false
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        
-        return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+
+    private fun loadRoute() {
+        val routeId = intent.getStringExtra(UiConstants.IntentKeys.ROUTE_ID)
+        if (routeId != null) {
+            viewModel.loadRoute(routeId)
+        } else {
+            showError("ID маршрута не указан")
+            finish()
+        }
     }
 
     private fun observeUiState() {

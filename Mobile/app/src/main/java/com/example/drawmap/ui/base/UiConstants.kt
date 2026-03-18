@@ -27,7 +27,7 @@ object UiConstants {
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         )
         
-        val ALL_REQUIRED_PERMISSIONS = LOCATION_PERMISSIONS + CAMERA_PERMISSIONS + STORAGE_PERMISSIONS
+        val ALL_REQUIRED_PERMISSIONS = LOCATION_PERMISSIONS
     }
     
     /**
@@ -65,6 +65,7 @@ object UiConstants {
         const val MAP_LOAD_DELAY = 300L
         const val TOAST_DURATION_SHORT = 2000
         const val TOAST_DURATION_LONG = 3500
+        const val CONNECTION_STATUS_DISPLAY_DURATION = 5000L // 5 секунд
     }
     
     /**

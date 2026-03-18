@@ -1,5 +1,6 @@
 package com.example.drawmap.ui.splash
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +12,7 @@ import com.example.drawmap.di.AppModeManager
 import com.example.drawmap.ui.base.BaseActivity
 import com.example.drawmap.ui.base.UiConstants
 import com.example.drawmap.ui.navigation.Navigator
+import com.example.drawmap.viewModel.SplashViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -18,6 +20,7 @@ import kotlinx.coroutines.launch
  * Splash экран приложения
  * Проверяет разрешения, загружает данные и проверяет подключение к API
  */
+@SuppressLint("CustomSplashScreen")
 class SplashActivity : BaseActivity() {
 
     private lateinit var viewModel: SplashViewModel
@@ -81,12 +84,8 @@ class SplashActivity : BaseActivity() {
                 loadDataAndNavigate()
             },
             onDenied = { deniedPermissions ->
-                Toast.makeText(
-                    this,
-                    "Для работы карты нужны разрешения \nОтклонено: ${deniedPermissions.size}",
-                    Toast.LENGTH_LONG
-                ).show()
-                loadDataAndNavigate() // Всё равно продолжаем (для тестов)
+                showMessage("Для работы карты нужны разрешения \nОтклонено: ${deniedPermissions.size}")
+                loadDataAndNavigate()
             }
         )
     }

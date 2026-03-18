@@ -1,21 +1,27 @@
-package com.example.drawmap.ui.heatmap
+package com.example.drawmap.ui.HeatMap
 
 import android.os.Bundle
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.example.drawmap.R
-import com.example.drawmap.di.ServiceLocator
+import com.example.drawmap.config.AppConfig
+import com.example.drawmap.ui.base.BaseActivity
 import com.example.drawmap.ui.components.BottomNavBar
+import com.example.drawmap.ui.heatmap.HeatmapOverlay
+import com.example.drawmap.ui.heatmap.HeatmapPoint
 import com.example.drawmap.ui.navigation.Navigator
+import com.example.drawmap.viewModel.HeatmapViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
-class HeatmapActivity : AppCompatActivity() {
+class HeatmapActivity : BaseActivity() {
 
+    private lateinit var viewModel: HeatmapViewModel
     private lateinit var navigator: Navigator
     private lateinit var bottomNav: BottomNavBar
     private lateinit var mapView: MapView
@@ -27,29 +33,44 @@ class HeatmapActivity : AppCompatActivity() {
         Configuration.getInstance().userAgentValue = packageName
         setContentView(R.layout.activity_heatmap)
 
+        viewModel = ViewModelProvider(this)[HeatmapViewModel::class.java]
         navigator = Navigator(this)
-
-        // Toolbar
-        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationOnClickListener { finish() }
+        initViews()
 
         // Map
+        setupMap()
+
+        // Heatmap overlay
+        setupHeatmapOverlay()
+
+        // Bottom navigation
+        setupBottomNavigation()
+
+        observeUiState()
+
+        viewModel.loadHeatmapData()
+    }
+
+    private fun initViews() {
+        bottomNav = findViewById(R.id.bottomNavigationView)
         mapView = findViewById(R.id.mapView)
+    }
+
+    private fun setupMap() {
         mapView.apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             controller.setZoom(13.0)
-            controller.setCenter(GeoPoint(55.7558, 37.6173)) // Москва
+            controller.setCenter(AppConfig.GeoPosition.DEFAULT_GEO_POSITION)
         }
+    }
 
-        // Heatmap overlay
+    private fun setupHeatmapOverlay() {
         heatmapOverlay = HeatmapOverlay(mapView)
         mapView.overlays.add(heatmapOverlay)
+    }
 
-        // Bottom navigation
-        bottomNav = findViewById(R.id.bottomNavigationView)
+    private fun setupBottomNavigation() {
         bottomNav.setSelectedItem(R.id.nav_heatmap)
 
         bottomNav.onItemSelected { itemId ->
@@ -58,32 +79,45 @@ class HeatmapActivity : AppCompatActivity() {
                     navigator.navigateTo(Navigator.SCREEN_HOME)
                     true
                 }
+
                 R.id.nav_gallery -> {
                     navigator.navigateTo(Navigator.SCREEN_GALLERY)
                     true
                 }
+
                 R.id.nav_heatmap -> true
                 else -> false
             }
         }
-
-        // Загружаем данные с задержкой чтобы не блокировать UI
-        mapView.postDelayed({
-            loadMockHeatmapData()
-        }, 300)
     }
 
-    private fun loadMockHeatmapData() {
+    private fun loadHeatmapData(points: List<HeatmapPoint> ) {
         lifecycleScope.launch {
-            val visitPoints = ServiceLocator.provideHeatmapRepository().getHeatmapData()
-            heatmapOverlay.setPoints(visitPoints)
+            heatmapOverlay.setPoints(points)
             mapView.invalidate()
+            showMessage("🔥 Загружено ${points.size} точек посещений")
+        }
+    }
 
-            Toast.makeText(
-                this@HeatmapActivity,
-                "🔥 Загружено ${visitPoints.size} точек посещений",
-                Toast.LENGTH_SHORT
-            ).show()
+    private fun observeUiState() {
+        lifecycleScope.launch {
+            viewModel.uiState.collectLatest { state ->
+                when (state) {
+                    is HeatmapViewModel.UiState.Success -> {
+                        loadHeatmapData(state.points)
+                    }
+                    is HeatmapViewModel.UiState.Empty -> {
+                        showMessage("Точек нет")
+                    }
+                    is HeatmapViewModel.UiState.Error -> {
+                        showError(state.message)
+                    }
+                    is HeatmapViewModel.UiState.Idle -> {
+                        // Ничего не делаем
+                    }
+                    else -> {}
+                }
+            }
         }
     }
 

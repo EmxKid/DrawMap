@@ -1,25 +1,17 @@
 package com.example.drawmap.ui.home
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.drawable.Drawable
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -34,10 +26,8 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -48,8 +38,16 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.toColorInt
+import com.example.drawmap.ui.base.BaseActivity
+import com.example.drawmap.ui.base.UiConstants
+import com.example.drawmap.utils.NetworkConnectivityChecker
+import androidx.core.view.isVisible
+import com.example.drawmap.config.AppConfig
+import com.example.drawmap.viewModel.HomeViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : BaseActivity() {
 
     private lateinit var viewModel: HomeViewModel
     private lateinit var navigator: Navigator
@@ -67,10 +65,9 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var myLocationOverlay: MyLocationNewOverlay
 
     private var ghostOverlays = mutableListOf<Any>()
-
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 1001
-    }
+    
+    // Job для автоматического скрытия плашки статуса
+    private var hideStatusJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,14 +83,7 @@ class HomeActivity : AppCompatActivity() {
         navigator = Navigator(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        mapView = findViewById(R.id.mapView)
-        bottomNavBar = findViewById(R.id.bottomNavBar)
-        fabMyLocation = findViewById(R.id.fabMyLocation)
-        fabStartRecording = findViewById(R.id.fabStartRecording)
-        permissionOverlay = findViewById(R.id.locationPermissionOverlay)
-        btnRequestLocation = findViewById(R.id.btnRequestLocation)
-        connectionStatusCard = findViewById(R.id.connectionStatusCard)
-        connectionStatusText = findViewById(R.id.connectionStatusText)
+        initViews()
 
         setupMap()
         setupNavigation()
@@ -104,35 +94,39 @@ class HomeActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
+    private fun initViews() {
+        mapView = findViewById(R.id.mapView)
+        bottomNavBar = findViewById(R.id.bottomNavBar)
+        fabMyLocation = findViewById(R.id.fabMyLocation)
+        fabStartRecording = findViewById(R.id.fabStartRecording)
+        permissionOverlay = findViewById(R.id.locationPermissionOverlay)
+        btnRequestLocation = findViewById(R.id.btnRequestLocation)
+        connectionStatusCard = findViewById(R.id.connectionStatusCard)
+        connectionStatusText = findViewById(R.id.connectionStatusText)
+    }
+
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         intent?.let { handleIntent(it) }
     }
 
-    private fun isOnline(): Boolean {
-        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        val nw = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(nw) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
     private fun handleIntent(intent: Intent) {
         val repeatId = intent.getStringExtra("repeat_route_id")
 
-        findViewById<View>(R.id.tvOffline)?.let { placeholder ->
-            placeholder.visibility = if (isOnline()) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.tvOffline).let { placeholder ->
+            placeholder.visibility = if (NetworkConnectivityChecker.hasInternetConnection(this)) View.GONE else View.VISIBLE
         }
 
         if (!repeatId.isNullOrEmpty()) {
             lifecycleScope.launch {
-                val route = ServiceLocator.routeRepository.getRouteById(repeatId)
+                val route = ServiceLocator.provideRouteRepository().getRouteById(repeatId)
                 if (route != null) {
                     clearGhostOverlays()
                     applyGhostRoute(route)
                     viewModel.prepareForRepeat(route)
-                    Toast.makeText(this@HomeActivity, "Наложен призрачный маршрут: ${route.title}", Toast.LENGTH_SHORT).show()
+                    showMessage("Наложен призрачный маршрут: ${route.title}")
                 } else {
-                    Toast.makeText(this@HomeActivity, "Не найден маршрут для повтора", Toast.LENGTH_SHORT).show()
+                    showError("Не найден маршрут для повтора")
                 }
             }
         }
@@ -155,9 +149,7 @@ class HomeActivity : AppCompatActivity() {
                 myLocationOverlay.setDirectionArrow(personBitmap, bitmap)
             }
             overlays.add(myLocationOverlay)
-
-            val moscow = GeoPoint(55.7558, 37.6173)
-            controller.setCenter(moscow)
+            controller.setCenter(AppConfig.GeoPosition.DEFAULT_GEO_POSITION)
         }
     }
 
@@ -257,24 +249,24 @@ class HomeActivity : AppCompatActivity() {
         fabMyLocation.setOnClickListener {
             requestCurrentLocation { geoPoint ->
                 mapView.controller.animateTo(geoPoint, 15.0, 500)
-                Toast.makeText(this, "📍 Центрируем на вас", Toast.LENGTH_SHORT).show()
+                showMessage("📍 Центрируем на вас")
             }
         }
 
         fabStartRecording.setOnClickListener {
-            if (hasLocationPermission()) {
+            if (permissionHelper.hasPermissions(UiConstants.Permissions.LOCATION_PERMISSIONS)) {
                 viewModel.onStartRecordingClick {
-                    Toast.makeText(this, "▶ Запись маршрута", Toast.LENGTH_SHORT).show()
+                    showMessage("▶ Запись маршрута")
                 }
             } else {
                 showPermissionOverlay()
-                Toast.makeText(this, "🔓 Сначала разрешите доступ к локации", Toast.LENGTH_SHORT).show()
+                showMessage("🔓 Сначала разрешите доступ к локации")
             }
         }
     }
 
     private fun setupLocationPermission() {
-        if (hasLocationPermission()) {
+        if (permissionHelper.hasPermissions(UiConstants.Permissions.LOCATION_PERMISSIONS)) {
             hidePermissionOverlay()
             enableMapControls(true)
             myLocationOverlay.enableMyLocation()
@@ -294,55 +286,34 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun hasLocationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
     private fun requestLocationPermission() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ),
-            PERMISSION_REQUEST_CODE
+        permissionHelper.requestLocationPermissions(
+            onGranted = {
+                onGrantedLocationPermission()
+            },
+            onDenied = { _ ->
+                onDeniedLocationPermission()
+            }
         )
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val granted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-
-            if (granted) {
-                Toast.makeText(this, "🎉 Доступ к локации разрешён", Toast.LENGTH_SHORT).show()
-                hidePermissionOverlay()
-                enableMapControls(true)
-                myLocationOverlay.enableMyLocation()
-                myLocationOverlay.enableFollowLocation()
-                requestCurrentLocation { geoPoint ->
-                    centerMapOnUser(geoPoint)
-                }
-            } else {
-                Toast.makeText(
-                    this,
-                    "⚠️ Без локации карта будет показывать Москву",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+    private fun onGrantedLocationPermission() {
+        showMessage("🎉 Доступ к локации разрешён")
+        hidePermissionOverlay()
+        enableMapControls(true)
+        myLocationOverlay.enableMyLocation()
+        myLocationOverlay.enableFollowLocation()
+        requestCurrentLocation { geoPoint ->
+            centerMapOnUser(geoPoint)
         }
     }
 
+    private fun onDeniedLocationPermission() {
+        showError("⚠️ Без доступа к локации карта не сможет показать ваше местоположение")
+    }
+
     private fun requestCurrentLocation(onLocationReceived: (GeoPoint) -> Unit) {
-        if (!hasLocationPermission()) {
+        if (!permissionHelper.hasPermissions(UiConstants.Permissions.LOCATION_PERMISSIONS)) {
             showPermissionOverlay()
             return
         }
@@ -357,10 +328,10 @@ class HomeActivity : AppCompatActivity() {
                     viewModel.updateUserLocation(location.latitude, location.longitude)
                     onLocationReceived(geoPoint)
                 } else {
-                    Toast.makeText(this, "📡 Не удалось получить локацию", Toast.LENGTH_SHORT).show()
+                    showMessage("📡 Не удалось получить локацию")
                 }
             }.addOnFailureListener {
-                Toast.makeText(this, "❌ Ошибка получения локации", Toast.LENGTH_SHORT).show()
+                showError("❌ Ошибка получения локации")
             }
         } catch (e: SecurityException) {
             showPermissionOverlay()
@@ -394,7 +365,8 @@ class HomeActivity : AppCompatActivity() {
         mapView.onResume()
         myLocationOverlay.onResume()
 
-        if (hasLocationPermission() && permissionOverlay.visibility == FrameLayout.VISIBLE) {
+        if (permissionHelper.hasPermissions(UiConstants.Permissions.LOCATION_PERMISSIONS) &&
+            permissionOverlay.isVisible) {
             hidePermissionOverlay()
             enableMapControls(true)
             myLocationOverlay.enableMyLocation()
@@ -413,6 +385,7 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        hideStatusJob?.cancel()
         locationCancellationToken.cancel()
         Configuration.getInstance().save(
             this,
@@ -430,10 +403,23 @@ class HomeActivity : AppCompatActivity() {
     private fun setupConnectionStatusObserver() {
         lifecycleScope.launch {
             AppModeManager.isOnlineMode.collect { isOnline ->
-                if (!isOnline) {
-                    connectionStatusCard.visibility = View.VISIBLE
-                    connectionStatusText.text = AppModeManager.getStatusMessage()
-                } else {
+                hideStatusJob?.cancel()
+                
+                // Показываем плашку с текстом статуса
+                connectionStatusCard.visibility = View.VISIBLE
+                if(isOnline){
+                    connectionStatusText.text = "✓ Подключено к серверу"
+                    connectionStatusCard.setCardBackgroundColor(ContextCompat.getColor(this@HomeActivity, android.R.color.holo_green_light))
+                    connectionStatusText.setTextColor(ContextCompat.getColor(this@HomeActivity, android.R.color.black))
+                }
+                else {
+                    connectionStatusText.text = "⚠ ${AppModeManager.getStatusMessage()}"
+                    connectionStatusCard.setCardBackgroundColor(ContextCompat.getColor(this@HomeActivity, android.R.color.holo_orange_light))
+                    connectionStatusText.setTextColor(ContextCompat.getColor(this@HomeActivity, android.R.color.black))
+                }
+                
+                hideStatusJob = lifecycleScope.launch {
+                    delay(UiConstants.Timing.CONNECTION_STATUS_DISPLAY_DURATION)
                     connectionStatusCard.visibility = View.GONE
                 }
             }

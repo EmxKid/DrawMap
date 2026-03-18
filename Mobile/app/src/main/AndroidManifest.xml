@@ -22,16 +22,12 @@
         android:theme="@style/Theme.DrawMap"
         android:usesCleartextTraffic="true"> <!-- Важно для загрузки тайлов по HTTP -->
 
+        <!-- Home Screen -->
         <activity
             android:name=".ui.home.HomeActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="false" />
 
-        <!-- Splash Screen -->
+        <!-- Splash Screen (главный экран запуска) -->
         <activity
             android:name=".ui.splash.SplashActivity"
             android:exported="true"
@@ -64,7 +60,7 @@
             android:exported="false" />
 
         <activity
-            android:name=".ui.heatmap.HeatmapActivity"
+            android:name=".ui.HeatMap.HeatmapActivity"
             android:exported="false"
             android:parentActivityName=".ui.home.HomeActivity"
             android:label="Тепловая карта" />

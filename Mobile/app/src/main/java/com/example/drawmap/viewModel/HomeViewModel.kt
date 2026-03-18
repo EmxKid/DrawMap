@@ -1,12 +1,10 @@
-package com.example.drawmap.ui.home
+package com.example.drawmap.viewModel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.drawmap.data.model.Route
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 
 /**
