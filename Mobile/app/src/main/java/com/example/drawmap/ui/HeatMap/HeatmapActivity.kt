@@ -27,6 +27,7 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import com.example.drawmap.ui.base.UiConstants
 import androidx.core.content.ContextCompat
 
+@Suppress("DEPRECATION")
 class HeatmapActivity : BaseActivity() {
 
     private lateinit var viewModel: HeatmapViewModel

@@ -54,11 +54,6 @@
             android:name=".ui.photo.PhotoActivity"
             android:exported="false" />
 
-        <!-- Route fullscreen -->
-        <activity
-            android:name=".ui.route.RouteFullScreenActivity"
-            android:exported="false" />
-
         <activity
             android:name=".ui.HeatMap.HeatmapActivity"
             android:exported="false"

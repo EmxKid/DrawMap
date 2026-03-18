@@ -164,10 +164,6 @@ class RouteDetailActivity : BaseActivity() {
             setPoints(route.coordinates)
             outlinePaint.color = 0xFF6200EE.toInt() // Фиолетовый цвет
             outlinePaint.strokeWidth = 6f
-            setOnClickListener { _, _, _ ->
-                RouteFullScreenActivity.start(this@RouteDetailActivity, route.id)
-                true
-            }
         }
         mapView.overlays.add(polyline)
 
@@ -175,13 +171,12 @@ class RouteDetailActivity : BaseActivity() {
         route.photoUris.forEach { uri ->
             val marker = Marker(mapView).apply {
                 position = route.coordinates.firstOrNull() ?: return@apply
-                setOnMarkerClickListener { _, _ ->
-                    com.example.drawmap.ui.photo.PhotoActivity.start(
-                        this@RouteDetailActivity,
-                        uri
-                    )
-                    true
-                }
+                icon = androidx.core.content.ContextCompat.getDrawable(
+                    this@RouteDetailActivity,
+                    R.drawable.ic_marker_green
+                )
+                // Явно отключаем кликабельность
+                setOnMarkerClickListener { _, _ -> false }
             }
             mapView.overlays.add(marker)
         }
