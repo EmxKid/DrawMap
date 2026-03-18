@@ -6,5 +6,5 @@ public class Location
     public double Longitude { get; set; }
     public double Latitude { get; set; }
     public DateTime Timestamp { get; set; }
-    public int VisitFrequency { get; set; }
+    public Photo? Photo { get; set; }
 }

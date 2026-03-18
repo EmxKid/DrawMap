@@ -1,3 +1,4 @@
+using DrawMap.DataSources.Configurations;
 using DrawMap.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,43 +19,8 @@ public class DrawMapDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Location>(entity =>
-        {
-            entity.HasKey(l => l.Id);
-
-            entity.Property(l => l.Id)
-                .IsRequired();
-        });
-
-        modelBuilder.Entity<Route>(entity =>
-        {
-            entity.HasKey(r => r.Id);
-
-            entity.Property(r => r.Id)
-                .IsRequired();
-
-            entity.HasMany(r => r.Locations)
-                .WithOne()
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasMany(r => r.Photos)
-                .WithOne()
-                .HasForeignKey(p => p.RouteId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<Photo>(entity =>
-        {
-            entity.HasKey(p => p.Id);
-
-            entity.Property(p => p.Id)
-                .IsRequired();
-
-            entity.Property(p => p.RouteId)
-                .IsRequired();
-
-            entity.Property(p => p.LocationId)
-                .IsRequired(false);
-        });
+        modelBuilder.ApplyConfiguration(new PhotoConfiguration());
+        modelBuilder.ApplyConfiguration(new LocationConfiguration());
+        modelBuilder.ApplyConfiguration(new RouteConfiguration());
     }
 }

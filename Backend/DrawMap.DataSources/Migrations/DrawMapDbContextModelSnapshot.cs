@@ -34,13 +34,11 @@ namespace DrawMap.DataSources.Migrations
                         .HasColumnType("double precision");
 
                     b.Property<string>("RouteId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("VisitFrequency")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -57,13 +55,10 @@ namespace DrawMap.DataSources.Migrations
                     b.Property<string>("LocationId")
                         .HasColumnType("text");
 
-                    b.Property<string>("RouteId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("RouteId");
+                    b.HasIndex("LocationId")
+                        .IsUnique();
 
                     b.ToTable("Photos");
                 });
@@ -90,25 +85,22 @@ namespace DrawMap.DataSources.Migrations
             modelBuilder.Entity("DrawMap.Domain.Location", b =>
                 {
                     b.HasOne("DrawMap.Domain.Route", null)
-                        .WithMany("Locations")
-                        .HasForeignKey("RouteId")
-                        .OnDelete(DeleteBehavior.Cascade);
-                });
-
-            modelBuilder.Entity("DrawMap.Domain.Photo", b =>
-                {
-                    b.HasOne("DrawMap.Domain.Route", null)
-                        .WithMany("Photos")
+                        .WithMany()
                         .HasForeignKey("RouteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("DrawMap.Domain.Route", b =>
+            modelBuilder.Entity("DrawMap.Domain.Photo", b =>
                 {
-                    b.Navigation("Locations");
+                    b.HasOne("DrawMap.Domain.Location", null)
+                        .WithOne("Photo")
+                        .HasForeignKey("DrawMap.Domain.Photo", "LocationId");
+                });
 
-                    b.Navigation("Photos");
+            modelBuilder.Entity("DrawMap.Domain.Location", b =>
+                {
+                    b.Navigation("Photo");
                 });
 #pragma warning restore 612, 618
         }

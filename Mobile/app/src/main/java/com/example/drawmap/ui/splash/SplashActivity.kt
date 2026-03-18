@@ -1,27 +1,30 @@
 package com.example.drawmap.ui.splash
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.drawmap.R
+import com.example.drawmap.di.AppModeManager
+import com.example.drawmap.ui.base.BaseActivity
+import com.example.drawmap.ui.base.UiConstants
 import com.example.drawmap.ui.navigation.Navigator
+import com.example.drawmap.viewModel.SplashViewModel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
-class SplashActivity : AppCompatActivity() {
+/**
+ * Splash экран приложения
+ * Проверяет разрешения, загружает данные и проверяет подключение к API
+ */
+@SuppressLint("CustomSplashScreen")
+class SplashActivity : BaseActivity() {
 
     private lateinit var viewModel: SplashViewModel
     private lateinit var navigator: Navigator
-
-    companion object {
-        private const val SPLASH_DURATION = 2000L // 2 секунды показа
-        private const val PERMISSION_REQUEST_CODE = 1001
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,67 +34,70 @@ class SplashActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this)[SplashViewModel::class.java]
         navigator = Navigator(this)
 
+        // Наблюдаем за состоянием загрузки
+        observeLoadingState()
+        
         // Запрос разрешений и загрузка
         checkPermissionsAndLoad()
     }
 
-    private fun checkPermissionsAndLoad() {
-        val permissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.CAMERA,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-
-        val missingPermissions = permissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+    /**
+     * Наблюдение за состоянием загрузки
+     */
+    private fun observeLoadingState() {
+        lifecycleScope.launch {
+            viewModel.loadingState.collectLatest { state ->
+                when (state) {
+                    is SplashViewModel.LoadingState.Loading -> {
+                        // TODO: Показать прогресс с сообщением state.message
+                    }
+                    is SplashViewModel.LoadingState.Success -> {
+                        if (!AppModeManager.isOnline()) {
+                            showMessage(" ${state.message}\nПриложение работает в офлайн режиме")
+                        }
+                    }
+                    is SplashViewModel.LoadingState.Error -> {
+                        showError(state.message)
+                    }
+                    is SplashViewModel.LoadingState.Idle -> {
+                        // Ничего не делаем
+                    }
+                }
+            }
         }
-
-        if (missingPermissions.isEmpty()) {
-            // Все разрешения есть — загружаем данные
-            loadDataAndNavigate()
-        } else {
-            // Запрашиваем недостающие разрешения
-            ActivityCompat.requestPermissions(
-                this,
-                missingPermissions.toTypedArray(),
-                PERMISSION_REQUEST_CODE
-            )
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-
-            if (allGranted) {
-                loadDataAndNavigate()
-            } else {
-                // Если пользователь отклонил критичные разрешения
-                Toast.makeText(
-                    this,
-                    "Для работы карты нужны разрешения 🗺️",
-                    Toast.LENGTH_LONG
-                ).show()
-                loadDataAndNavigate() // Всё равно продолжаем (для тестов)
+        
+        lifecycleScope.launch {
+            viewModel.isDataLoaded.collectLatest { isLoaded ->
+                if (isLoaded) {
+                    navigateToHome()
+                }
             }
         }
     }
+    
+    /**
+     * Проверка и запрос разрешений
+     */
+    private fun checkPermissionsAndLoad() {
+        permissionHelper.requestAllRequiredPermissions(
+            onGranted = {
+                loadDataAndNavigate()
+            },
+            onDenied = { deniedPermissions ->
+                showMessage("Для работы карты нужны разрешения \nОтклонено: ${deniedPermissions.size}")
+                loadDataAndNavigate()
+            }
+        )
+    }
 
     private fun loadDataAndNavigate() {
-        // Загружаем данные пользователя (кэш, настройки)
-        viewModel.loadUserData()
+        viewModel.loadUserData(this)
+    }
 
-        // Задержка для показа сплеша + навигация
+    private fun navigateToHome() {
         Handler(Looper.getMainLooper()).postDelayed({
             navigator.navigateTo(Navigator.SCREEN_HOME)
             finish() // Закрываем Splash, чтобы не вернуться назад
-        }, SPLASH_DURATION)
+        }, UiConstants.Timing.SPLASH_DURATION)
     }
 }

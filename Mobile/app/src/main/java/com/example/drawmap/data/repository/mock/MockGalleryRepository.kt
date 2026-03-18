@@ -1,7 +1,8 @@
-package com.example.drawmap.data.repository
+package com.example.drawmap.data.repository.mock
 
 import com.example.drawmap.R
 import com.example.drawmap.data.model.GalleryItem
+import com.example.drawmap.data.repository.GalleryRepository
 import kotlinx.coroutines.delay
 
 class MockGalleryRepository : GalleryRepository {

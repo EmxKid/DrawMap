@@ -16,4 +16,6 @@
     <string name="gallery_view">👁 Просмотреть</string>
     <string name="gallery_back">← На главную</string>
     <string name="gallery_title">📁 Моя галерея</string>
+    <string name="success_connect">✅</string>
+    <string name="failed_connect">⚠️</string>
 </resources>

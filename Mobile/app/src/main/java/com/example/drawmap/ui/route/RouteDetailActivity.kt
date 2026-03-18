@@ -2,209 +2,234 @@ package com.example.drawmap.ui.route
 
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.example.drawmap.R
 import com.example.drawmap.data.model.Route
-import com.example.drawmap.di.ServiceLocator
+import com.example.drawmap.ui.base.BaseActivity
+import com.example.drawmap.ui.base.UiConstants
+import com.example.drawmap.ui.utils.MapFallbackRenderer
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.Marker
-import kotlinx.coroutines.launch
-import kotlin.math.max
-import kotlin.math.min
+import org.osmdroid.views.overlay.Polyline
+import androidx.core.graphics.toColorInt
+import com.example.drawmap.utils.NetworkConnectivityChecker
+import com.example.drawmap.viewModel.RouteDetailViewModel
 
-class RouteDetailActivity : AppCompatActivity() {
-
-    // FOR DEBUG: если поставить в true, всегда показываем векторный fallback вместо MapView
-    private val forceFallback = false
+/**
+ * Activity для отображения деталей маршрута
+ * Показывает маршрут на карте с возможностью повтора
+ */
+class RouteDetailActivity : BaseActivity() {
 
     companion object {
-        private const val EXTRA_ROUTE_ID = "extra_route_id"
         fun start(context: Context, routeId: String) {
-            val i = Intent(context, RouteDetailActivity::class.java)
-            i.putExtra(EXTRA_ROUTE_ID, routeId)
-            context.startActivity(i)
+            val intent = Intent(context, RouteDetailActivity::class.java).apply {
+                putExtra(UiConstants.IntentKeys.ROUTE_ID, routeId)
+            }
+            context.startActivity(intent)
         }
     }
 
+    private lateinit var viewModel: RouteDetailViewModel
     private lateinit var mapView: MapView
+    private lateinit var tvOffline: TextView
+    private lateinit var ivFallback: ImageView
+    private lateinit var btnRepeat: Button
+
     private var currentRoute: Route? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // ensure osmdroid is configured
+        
+        // Настройка osmdroid
         Configuration.getInstance().userAgentValue = packageName
-        // NOTE: don't call Configuration.load(...) here to avoid depending on androidx.preference
-
+        
         setContentView(R.layout.activity_route_detail)
 
+        // Инициализация ViewModel
+        viewModel = ViewModelProvider(this)[RouteDetailViewModel::class.java]
+
+        // Инициализация views
+        initViews()
+        
+        // Настройка карты
+        setupMap()
+        
+        // Наблюдение за состоянием
+        observeUiState()
+        
+        // Настройка кнопок
+        setupButtons()
+
+        // Загрузка маршрута
+        loadRoute()
+    }
+
+
+
+    private fun initViews() {
         mapView = findViewById(R.id.mapViewDetail)
-        val tvOffline = findViewById<TextView>(R.id.tvOfflineDetail)
-        val ivFallback = findViewById<ImageView>(R.id.ivMapFallback)
+        tvOffline = findViewById(R.id.tvOfflineDetail)
+        ivFallback = findViewById(R.id.ivMapFallback)
+        btnRepeat = findViewById(R.id.btnRepeat)
+    }
 
-        // Если нет сети, показываем оффлайн-заглушку и прерываем инициализацию карты
-        if (!hasNetwork()) {
-            tvOffline.visibility = android.view.View.VISIBLE
-            mapView.visibility = android.view.View.GONE
-            ivFallback.visibility = android.view.View.GONE
+    private fun setupMap() {
+        tvOffline.visibility = android.view.View.GONE
+        mapView.visibility = android.view.View.VISIBLE
+        ivFallback.visibility = android.view.View.VISIBLE
+
+        mapView.apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            setBackgroundColor("#ECEFF1".toColorInt())
+            controller.setZoom(UiConstants.Map.DEFAULT_ZOOM)
+        }
+        
+        if (!NetworkConnectivityChecker.hasInternetConnection(this)) {
+            showMessage("⚠️ Нет интернета. Тайлы карты могут не загрузиться")
+        }
+    }
+
+    private fun loadRoute() {
+        val routeId = intent.getStringExtra(UiConstants.IntentKeys.ROUTE_ID)
+        if (routeId != null) {
+            viewModel.loadRoute(routeId)
         } else {
-            tvOffline.visibility = android.view.View.GONE
-            // скрываем mapView изначально — показываем fallback пока тайлы не подтвердятся
-            mapView.visibility = android.view.View.GONE
-            ivFallback.visibility = android.view.View.VISIBLE // показываем пока тайлы грузятся
-            // set explicit tile source
-            mapView.setTileSource(TileSourceFactory.MAPNIK)
-            mapView.setMultiTouchControls(true)
-            // neutral background while tiles load (avoid bright green)
-            mapView.setBackgroundColor(android.graphics.Color.parseColor("#ECEFF1"))
-        }
-
-        val routeId = intent.getStringExtra(EXTRA_ROUTE_ID) ?: return
-
-        // load route (mock) in coroutine
-        lifecycleScope.launch {
-            val route = ServiceLocator.routeRepository.getRouteById(routeId)
-            if (route != null) {
-                currentRoute = route
-                if (hasNetwork()) showRouteOnMap(route)
-            } else {
-                Toast.makeText(this@RouteDetailActivity, "Route not found", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
-
-        findViewById<Button>(R.id.btnRepeat)?.setOnClickListener {
-            // стартуем HomeActivity с extra, чтобы тот накрыл маршрут как "призрак"
-            val i = Intent(this, com.example.drawmap.ui.home.HomeActivity::class.java)
-            i.putExtra("repeat_route_id", routeId)
-            startActivity(i)
+            showError("ID маршрута не указан")
             finish()
         }
     }
 
-    private fun hasNetwork(): Boolean {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val nw = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(nw) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    private fun observeUiState() {
+        lifecycleScope.launch {
+            viewModel.uiState.collectLatest { state ->
+                when (state) {
+                    is RouteDetailViewModel.UiState.Loading -> {
+                        // TODO: Показать прогресс
+                    }
+                    is RouteDetailViewModel.UiState.Success -> {
+                        currentRoute = state.route
+                        showRouteOnMap(state.route)
+                    }
+                    is RouteDetailViewModel.UiState.Error -> {
+                        showError(state.message)
+                    }
+                    is RouteDetailViewModel.UiState.Idle -> {
+                        // Ничего не делаем
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setupButtons() {
+        btnRepeat.setOnClickListener {
+            val routeId = intent.getStringExtra(UiConstants.IntentKeys.ROUTE_ID) ?: return@setOnClickListener
+            val intent = Intent(this, com.example.drawmap.ui.home.HomeActivity::class.java).apply {
+                putExtra(UiConstants.IntentKeys.REPEAT_ROUTE_ID, routeId)
+            }
+            startActivity(intent)
+            finish()
+        }
     }
 
     private fun showRouteOnMap(route: Route) {
-        val ivFallback = findViewById<ImageView>(R.id.ivMapFallback)
-
-        // Если отладочный флаг включён, показываем сразу векторный fallback и не используем MapView
-        if (forceFallback) {
-            lifecycleScope.launch {
-                try {
-                    val fb = renderFallbackBitmap(route)
-                    ivFallback.post {
-                        ivFallback.setImageBitmap(fb)
-                        ivFallback.visibility = android.view.View.VISIBLE
-                        mapView.visibility = android.view.View.GONE
-                    }
-                } catch (_: Exception) {
-                }
-            }
-            return
-        }
-
-        // generate fallback image in background and show immediately
+        // Генерируем и показываем fallback на заднем плане (пока карта грузится)
         lifecycleScope.launch {
             try {
-                val fb = renderFallbackBitmap(route)
-                ivFallback.post {
-                    ivFallback.setImageBitmap(fb)
-                    ivFallback.visibility = android.view.View.VISIBLE
-                }
-            } catch (_: Exception) {
+                val fallbackBitmap = MapFallbackRenderer.renderRouteOnMap(
+                    points = route.coordinates,
+                    width = 800,
+                    height = 600
+                )
+                ivFallback.setImageBitmap(fallbackBitmap)
+                // Fallback будет видно только если карта не загрузится
+            } catch (e: Exception) {
+                // Игнорируем ошибку рендеринга fallback
             }
         }
 
+        // Добавляем маршрут на карту
         val polyline = Polyline(mapView).apply {
             setPoints(route.coordinates)
-            outlinePaint.color = 0xFF6200EE.toInt()
+            outlinePaint.color = 0xFF6200EE.toInt() // Фиолетовый цвет
             outlinePaint.strokeWidth = 6f
             setOnClickListener { _, _, _ ->
-                // открыть fullscreen
                 RouteFullScreenActivity.start(this@RouteDetailActivity, route.id)
                 true
             }
         }
         mapView.overlays.add(polyline)
 
-        // photo markers
+        // Добавляем маркеры фотографий
         route.photoUris.forEach { uri ->
-            val m = Marker(mapView).apply {
+            val marker = Marker(mapView).apply {
                 position = route.coordinates.firstOrNull() ?: return@apply
                 setOnMarkerClickListener { _, _ ->
-                    com.example.drawmap.ui.photo.PhotoActivity.start(this@RouteDetailActivity, uri)
+                    com.example.drawmap.ui.photo.PhotoActivity.start(
+                        this@RouteDetailActivity,
+                        uri
+                    )
                     true
                 }
             }
-            mapView.overlays.add(m)
+            mapView.overlays.add(marker)
         }
 
-        // center
+        // Центрируем карту
         if (route.coordinates.isNotEmpty()) {
-            mapView.controller.setZoom(15.0)
+            mapView.controller.setZoom(UiConstants.Map.DEFAULT_ZOOM)
             mapView.controller.setCenter(route.coordinates[0])
         }
 
-        // проверяем через задержку — если tiles загружены, прячем fallback
+        // Проверяем загрузку тайлов через задержку
         mapView.postDelayed({
-            try {
-                val bmp = android.graphics.Bitmap.createBitmap(
-                    8,
-                    8,
-                    android.graphics.Bitmap.Config.ARGB_8888
-                )
-                val c = android.graphics.Canvas(bmp)
-                mapView.draw(c)
-                // sample several pixels to decide
-                var greenCount = 0
-                var total = 0
-                for (yy in 0 until bmp.height step 2) {
-                    for (xx in 0 until bmp.width step 2) {
-                        val px = bmp.getPixel(xx, yy)
-                        val g = android.graphics.Color.green(px)
-                        val r = android.graphics.Color.red(px)
-                        val b = android.graphics.Color.blue(px)
-                        if (g > 200 && r < 100 && b < 120) greenCount++
-                        total++
-                    }
-                }
-                val greenRatio = if (total == 0) 1.0 else greenCount.toDouble() / total.toDouble()
-                if (greenRatio < 0.6) {
-                    // tiles seem ok -> show map, hide fallback
-                    ivFallback.visibility = android.view.View.GONE
-                    mapView.visibility = android.view.View.VISIBLE
-                } else {
-                    // оставляем fallback видимым
-                    ivFallback.visibility = android.view.View.VISIBLE
-                    mapView.visibility = android.view.View.GONE
-                }
-            } catch (_: Exception) {
-            }
-        }, 2500)
+            checkTilesAndSwitchView()
+        }, 2500) // Даем время на загрузку тайлов
 
         mapView.invalidate()
+    }
+
+    private fun checkTilesAndSwitchView() {
+        try {
+            val sampleBitmap = android.graphics.Bitmap.createBitmap(8, 8, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(sampleBitmap)
+            mapView.draw(canvas)
+
+            if (!MapFallbackRenderer.isMostlyGreen(sampleBitmap)) {
+                // Тайлы загружены успешно - скрываем fallback
+                ivFallback.visibility = android.view.View.GONE
+                mapView.visibility = android.view.View.VISIBLE
+            } else {
+                // Тайлы не загрузились - показываем fallback поверх
+                ivFallback.visibility = android.view.View.VISIBLE
+                mapView.visibility = android.view.View.GONE
+            }
+            
+            sampleBitmap.recycle()
+        } catch (e: Exception) {
+            // В случае ошибки показываем карту
+            mapView.visibility = android.view.View.VISIBLE
+            ivFallback.visibility = android.view.View.GONE
+        }
     }
 
     override fun onResume() {
         super.onResume()
         try {
             mapView.onResume()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // Игнорируем ошибки
         }
     }
 
@@ -212,130 +237,8 @@ class RouteDetailActivity : AppCompatActivity() {
         super.onPause()
         try {
             mapView.onPause()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // Игнорируем ошибки
         }
-    }
-
-    // simple fallback renderer (similar to Gallery's vector thumbnail but larger)
-    private fun renderFallbackBitmap(
-        route: Route,
-        w: Int = 800,
-        h: Int = 600
-    ): android.graphics.Bitmap {
-        val points = route.coordinates
-        val bmp =
-            android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bmp)
-        canvas.drawColor(android.graphics.Color.parseColor("#F2EFEA"))
-        val blockPaint = android.graphics.Paint().apply {
-            color = android.graphics.Color.parseColor("#EDE6DF"); style =
-            android.graphics.Paint.Style.FILL
-        }
-        val stroke = android.graphics.Paint().apply {
-            color = android.graphics.Color.parseColor("#DDD6CF"); style =
-            android.graphics.Paint.Style.STROKE; strokeWidth = 2f
-        }
-        val cols = 6
-        val rows = 8
-        val padX = (w * 0.04).toInt()
-        val padY = (h * 0.04).toInt()
-        val cellW = (w - padX * 2) / cols
-        val cellH = (h - padY * 2) / rows
-        for (r in 0 until rows) {
-            for (c in 0 until cols) {
-                val left = padX + c * cellW + (if ((r + c) % 2 == 0) 6 else 0)
-                val top = padY + r * cellH + (if ((r + c) % 3 == 0) 4 else 0)
-                val rect = android.graphics.RectF(
-                    left.toFloat(),
-                    top.toFloat(),
-                    (left + cellW - 8).toFloat(),
-                    (top + cellH - 8).toFloat()
-                )
-                canvas.drawRoundRect(rect, 8f, 8f, blockPaint)
-                canvas.drawRoundRect(rect, 8f, 8f, stroke)
-            }
-        }
-        val parkPaint =
-            android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#DFF2D8") }
-        val parkRect = android.graphics.RectF(
-            (w * 0.08).toFloat(),
-            (h * 0.18).toFloat(),
-            (w * 0.45).toFloat(),
-            (h * 0.5).toFloat()
-        )
-        canvas.drawRoundRect(parkRect, 30f, 30f, parkPaint)
-
-        // draw river
-        val riverPaint = android.graphics.Paint().apply {
-            color = android.graphics.Color.parseColor("#C7EAFB"); style =
-            android.graphics.Paint.Style.STROKE; strokeWidth = (h * 0.06).toFloat(); isAntiAlias =
-            true
-        }
-        val riverPath = android.graphics.Path()
-        riverPath.moveTo((w * 0.6).toFloat(), (h * 0.1).toFloat())
-        riverPath.quadTo(
-            (w * 0.75).toFloat(),
-            (h * 0.35).toFloat(),
-            (w * 0.6).toFloat(),
-            (h * 0.6).toFloat()
-        )
-        riverPath.quadTo(
-            (w * 0.45).toFloat(),
-            (h * 0.85).toFloat(),
-            (w * 0.8).toFloat(),
-            (h * 0.9).toFloat()
-        )
-        canvas.drawPath(riverPath, riverPaint)
-
-        if (points.isNotEmpty()) {
-            var minLat = points[0].latitude
-            var maxLat = points[0].latitude
-            var minLon = points[0].longitude
-            var maxLon = points[0].longitude
-            for (p in points) {
-                minLat = min(minLat, p.latitude)
-                maxLat = max(maxLat, p.latitude)
-                minLon = min(minLon, p.longitude)
-                maxLon = max(maxLon, p.longitude)
-            }
-            val latPad = (maxLat - minLat) * 0.1 + 1e-6
-            val lonPad = (maxLon - minLon) * 0.1 + 1e-6
-            minLat -= latPad; maxLat += latPad; minLon -= lonPad; maxLon += lonPad
-            fun xOf(lon: Double) = ((lon - minLon) / (maxLon - minLon) * (w - 64) + 32).toFloat()
-            fun yOf(lat: Double) =
-                ((maxLat - lat) / (maxLat - minLat) * (h - 64) + 32).toFloat() // inverted
-
-            val pathPaint = android.graphics.Paint().apply {
-                color = android.graphics.Color.parseColor("#7C4DFF"); style =
-                android.graphics.Paint.Style.STROKE; strokeWidth = 10f; isAntiAlias = true
-            }
-            val path = android.graphics.Path()
-            for ((i, p) in points.withIndex()) {
-                val x = xOf(p.longitude)
-                val y = yOf(p.latitude)
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
-            canvas.drawPath(path, pathPaint)
-            val sx = xOf(points.first().longitude)
-            val sy = yOf(points.first().latitude)
-            canvas.drawCircle(
-                sx,
-                sy,
-                12f,
-                android.graphics.Paint()
-                    .apply { color = android.graphics.Color.parseColor("#FFD54F") })
-            canvas.drawCircle(
-                sx,
-                sy,
-                12f,
-                android.graphics.Paint().apply {
-                    color = android.graphics.Color.parseColor("#E6E0FF"); style =
-                    android.graphics.Paint.Style.STROKE; strokeWidth = 4f
-                })
-        }
-
-        return bmp
     }
 }
-
-

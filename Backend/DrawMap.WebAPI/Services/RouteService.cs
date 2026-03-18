@@ -7,63 +7,40 @@ namespace DrawMap.WebAPI.Services;
 public class RouteService : IRouteService
 {
     private readonly IRouteRepository _routeRepository;
-    private readonly IPhotoRepository _photoRepository;
 
-    public RouteService(IRouteRepository routeRepository, IPhotoRepository photoRepository)
+    public RouteService(IRouteRepository routeRepository)
     {
         _routeRepository = routeRepository;
-        _photoRepository = photoRepository;
     }
 
-    public async Task<DomainRoute> AddRoute(DomainRoute route)
+    public async Task<DomainRoute> AddRoute(DomainRoute route, CancellationToken cancellationToken)
     {
         route.Id = Guid.NewGuid().ToString();
-        route.Photos ??= [];
         route.Locations ??= [];
         foreach (var location in route.Locations)
             location.Id ??= Guid.NewGuid().ToString();
-        await _routeRepository.AddRoute(route);
+        await _routeRepository.AddRoute(route, cancellationToken);
         return route;
     }
 
-    public async Task<DomainRoute?> GetRoute(string routeId)
+    public async Task<DomainRoute?> GetRoute(string routeId, CancellationToken cancellationToken)
     {
-        return await _routeRepository.GetRoute(routeId);
+        return await _routeRepository.GetRoute(routeId, cancellationToken);
     }
 
-    public async Task<bool> DeleteRoute(string routeId)
+    public async Task<List<DomainRoute>> GetRoutes(CancellationToken cancellationToken)
     {
-        await DeletePhotosByRoute(routeId);
-        return await _routeRepository.DeleteRoute(routeId);
+        return await _routeRepository.GetRoutes(cancellationToken);
     }
 
-    public async Task<bool> UpdateRoute(string routeId, DomainRoute route)
+    public async Task<bool> DeleteRoute(string routeId, CancellationToken cancellationToken)
     {
-        var result = await _routeRepository.UpdateRoute(routeId, route);
+        return await _routeRepository.DeleteRoute(routeId, cancellationToken);
+    }
+
+    public async Task<bool> UpdateRoute(string routeId, DomainRoute route, CancellationToken cancellationToken)
+    {
+        var result = await _routeRepository.UpdateRoute(routeId, route, cancellationToken);
         return result is not null;
-    }
-
-    private async Task<bool> DeletePhotosByRoute(string routeId)
-    {
-        var photos = await ListPhotosByRoute(routeId);
-        foreach (var photo in photos)
-        {
-            if (photo.Id is not null)
-                await _photoRepository.DeletePhoto(photo.Id);
-        }
-        return true;
-    }
-
-    private async Task<List<Photo>> ListPhotosByRoute(string routeId)
-    {
-        return await _photoRepository.ListPhotosByRoute(routeId);
-    }
-
-    public async Task<Photo> AddPhoto(string routeId, Photo photo)
-    {
-        photo.Id = Guid.NewGuid().ToString();
-        photo.RouteId = routeId;
-        await _photoRepository.AddPhoto(photo);
-        return photo;
     }
 }
