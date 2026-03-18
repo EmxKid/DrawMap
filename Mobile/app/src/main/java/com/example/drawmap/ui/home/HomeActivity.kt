@@ -146,7 +146,8 @@ class HomeActivity : BaseActivity() {
                     resources,
                     org.osmdroid.library.R.drawable.person
                 )
-                myLocationOverlay.setDirectionArrow(personBitmap, bitmap)
+                // Первый параметр - иконка при движении, второй - статичная иконка
+                myLocationOverlay.setDirectionArrow(bitmap, bitmap)
             }
             overlays.add(myLocationOverlay)
             controller.setCenter(AppConfig.GeoPosition.DEFAULT_GEO_POSITION)

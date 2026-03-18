@@ -9,11 +9,6 @@ object UiConstants {
      * Разрешения приложения
      */
     object Permissions {
-        const val LOCATION_REQUEST_CODE = 1001
-        const val CAMERA_REQUEST_CODE = 1002
-        const val STORAGE_REQUEST_CODE = 1003
-        const val ALL_PERMISSIONS_REQUEST_CODE = 1000
-        
         val LOCATION_PERMISSIONS = arrayOf(
             android.Manifest.permission.ACCESS_FINE_LOCATION,
             android.Manifest.permission.ACCESS_COARSE_LOCATION
@@ -27,7 +22,7 @@ object UiConstants {
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         )
         
-        val ALL_REQUIRED_PERMISSIONS = LOCATION_PERMISSIONS
+        val ALL_REQUIRED_PERMISSIONS = LOCATION_PERMISSIONS + CAMERA_PERMISSIONS + STORAGE_PERMISSIONS
     }
     
     /**

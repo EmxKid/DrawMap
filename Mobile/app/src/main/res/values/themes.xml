@@ -2,7 +2,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Базовая тема для всего приложения -->
-    <style name="Theme.DrawMap" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Используем Light тему вместо DayNight, чтобы отключить автоматическое переключение -->
+    <style name="Theme.DrawMap" parent="Theme.MaterialComponents.Light.NoActionBar">
 
         <!-- === ЦВЕТОВАЯ СХЕМА === -->
         <item name="colorPrimary">@color/white</item>

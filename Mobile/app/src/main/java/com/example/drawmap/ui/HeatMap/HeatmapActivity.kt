@@ -18,12 +18,14 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.example.drawmap.ui.base.UiConstants
+import androidx.core.content.ContextCompat
 
 class HeatmapActivity : BaseActivity() {
 
@@ -34,6 +36,7 @@ class HeatmapActivity : BaseActivity() {
     private lateinit var heatmapOverlay: HeatmapOverlay
     private lateinit var fabMyLocation: FloatingActionButton
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var myLocationOverlay: MyLocationNewOverlay
     private var locationCancellationToken = CancellationTokenSource()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,7 +79,33 @@ class HeatmapActivity : BaseActivity() {
             setMultiTouchControls(true)
             controller.setZoom(13.0)
             controller.setCenter(GeoPoint(56.4977, 84.9744)) // Томск
+
+            // Добавляем оверлей с меткой пользователя
+            myLocationOverlay = MyLocationNewOverlay(mapView)
+            val directionArrow = ContextCompat.getDrawable(this@HeatmapActivity, R.drawable.ic_marker_blue)
+            if (directionArrow != null) {
+                val bitmap = drawableToBitmap(directionArrow)
+                val personBitmap = android.graphics.BitmapFactory.decodeResource(
+                    resources,
+                    org.osmdroid.library.R.drawable.person
+                )
+                // Первый параметр - иконка при движении, второй - статичная иконка
+                myLocationOverlay.setDirectionArrow(bitmap, bitmap)
+            }
+            overlays.add(myLocationOverlay)
         }
+    }
+
+    private fun drawableToBitmap(drawable: android.graphics.drawable.Drawable): android.graphics.Bitmap {
+        val bitmap = android.graphics.Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            android.graphics.Bitmap.Config.ARGB_8888
+        )
+        val canvas = android.graphics.Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
     }
 
     private fun setupHeatmapOverlay() {
@@ -121,6 +150,7 @@ class HeatmapActivity : BaseActivity() {
                 UiConstants.Permissions.LOCATION_PERMISSIONS,
                 onGranted = {
                     showMessage("🎉 Доступ к локации разрешён")
+                    enableLocationTracking()
                     requestCurrentLocation(onLocationReceived)
                 },
                 onDenied = {
@@ -129,6 +159,9 @@ class HeatmapActivity : BaseActivity() {
             )
             return
         }
+
+        // Включаем отслеживание локации если еще не включено
+        enableLocationTracking()
 
         try {
             fusedLocationClient.getCurrentLocation(
@@ -146,6 +179,15 @@ class HeatmapActivity : BaseActivity() {
             }
         } catch (e: SecurityException) {
             showMessage("🔓 Необходим доступ к локации")
+        }
+    }
+
+    private fun enableLocationTracking() {
+        try {
+            myLocationOverlay.enableMyLocation()
+            // Не включаем followLocation, чтобы карта не следовала автоматически
+        } catch (e: SecurityException) {
+            // Игнорируем, если нет разрешений
         }
     }
 
@@ -182,11 +224,18 @@ class HeatmapActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         mapView.onResume()
+        myLocationOverlay.onResume()
+        
+        // Включаем отслеживание локации если есть разрешения
+        if (permissionHelper.hasPermissions(UiConstants.Permissions.LOCATION_PERMISSIONS)) {
+            enableLocationTracking()
+        }
     }
 
     override fun onPause() {
         super.onPause()
         mapView.onPause()
+        myLocationOverlay.onPause()
     }
 
     override fun onDestroy() {
