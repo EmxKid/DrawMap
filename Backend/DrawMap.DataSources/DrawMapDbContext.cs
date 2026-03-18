@@ -11,9 +11,9 @@ public class DrawMapDbContext : DbContext
     {
     }
 
-    public DbSet<Route> Routes => Set<Route>();
-    public DbSet<Photo> Photos => Set<Photo>();
-    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Route> Routes { get; set; }
+    public DbSet<Photo> Photos { get; set; }
+    public DbSet<Location> Locations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

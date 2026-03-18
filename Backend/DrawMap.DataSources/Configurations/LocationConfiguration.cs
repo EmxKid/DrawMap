@@ -17,7 +17,7 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
             .IsRequired();
 
         builder.HasOne<Route>()
-            .WithMany()
+            .WithMany(r => r.Locations)
             .HasForeignKey(l => l.RouteId)
             .OnDelete(DeleteBehavior.Cascade);
     }

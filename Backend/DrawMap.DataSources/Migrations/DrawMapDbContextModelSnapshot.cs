@@ -85,7 +85,7 @@ namespace DrawMap.DataSources.Migrations
             modelBuilder.Entity("DrawMap.Domain.Location", b =>
                 {
                     b.HasOne("DrawMap.Domain.Route", null)
-                        .WithMany()
+                        .WithMany("Locations")
                         .HasForeignKey("RouteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -101,6 +101,11 @@ namespace DrawMap.DataSources.Migrations
             modelBuilder.Entity("DrawMap.Domain.Location", b =>
                 {
                     b.Navigation("Photo");
+                });
+
+            modelBuilder.Entity("DrawMap.Domain.Route", b =>
+                {
+                    b.Navigation("Locations");
                 });
 #pragma warning restore 612, 618
         }
