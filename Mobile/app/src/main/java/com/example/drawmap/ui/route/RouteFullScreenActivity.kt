@@ -13,6 +13,7 @@ import com.example.drawmap.data.model.Route
 import com.example.drawmap.ui.base.BaseActivity
 import com.example.drawmap.ui.base.UiConstants
 import com.example.drawmap.ui.utils.MapFallbackRenderer
+import com.example.drawmap.viewModel.RouteFullScreenViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration

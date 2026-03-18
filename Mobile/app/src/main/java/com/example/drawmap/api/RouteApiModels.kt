@@ -29,8 +29,8 @@ data class PhotoDto(
 data class RouteDto(
     @SerializedName("id") val id: String?,
     @SerializedName("totalDistance") val totalDistance: Double?,
-    @SerializedName("startTime") val startTime: String?, // ISO 8601 формат
-    @SerializedName("endTime") val endTime: String?, // ISO 8601 формат
+    @SerializedName("startTime") val startTime: String?,
+    @SerializedName("endTime") val endTime: String?,
     @SerializedName("locations") val locations: List<LocationDto>?
 )
 

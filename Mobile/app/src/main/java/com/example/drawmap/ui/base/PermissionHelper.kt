@@ -30,6 +30,14 @@ class PermissionHelper(private val activity: AppCompatActivity) {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
+    fun hasPermissions(permissions: Array<String>): Boolean {
+        val missingPermissions = permissions.filter { permission ->
+            !hasPermission(permission)
+        }.toTypedArray()
+
+        return missingPermissions.isEmpty()
+    }
+
     fun requestPermissions(
         permissions: Array<String>,
         onGranted: () -> Unit,
@@ -38,7 +46,6 @@ class PermissionHelper(private val activity: AppCompatActivity) {
         onPermissionsGranted = onGranted
         onPermissionsDenied = onDenied
 
-        // Фильтруем уже предоставленные разрешения
         val missingPermissions = permissions.filter { permission ->
             !hasPermission(permission)
         }.toTypedArray()

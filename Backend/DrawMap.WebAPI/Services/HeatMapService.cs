@@ -38,10 +38,14 @@ public class HeatMapService : IHeatMapService
             }
         }
         
+        // Подсчитываем общее количество локаций
+        var totalLocations = groupedLocations.Sum(kvp => kvp.Value);
+        
         var heatMaps = groupedLocations.Select(kvp => new HeatMap
         {
             Location = kvp.Key,
-            VisitFrequency = kvp.Value
+            // Рассчитываем процент от общего количества локаций
+            VisitFrequency = totalLocations > 0 ? (float)kvp.Value / totalLocations * 100 : 0
         }).ToList();
         
         return Task.FromResult(heatMaps);

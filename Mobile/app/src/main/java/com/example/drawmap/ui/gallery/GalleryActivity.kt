@@ -12,6 +12,7 @@ import com.example.drawmap.ui.base.BaseActivity
 import com.example.drawmap.ui.navigation.Navigator
 import com.example.drawmap.ui.route.RouteDetailActivity
 import com.example.drawmap.ui.utils.MapFallbackRenderer
+import com.example.drawmap.viewModel.GalleryViewModel
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -40,6 +41,8 @@ class GalleryActivity : BaseActivity() {
         viewModel = ViewModelProvider(this)[GalleryViewModel::class.java]
         navigator = Navigator(this)
 
+        initViews()
+
         // Настройка Toolbar
         setupToolbar()
         
@@ -56,6 +59,11 @@ class GalleryActivity : BaseActivity() {
         viewModel.loadGalleryItems()
     }
 
+    private fun initViews() {
+        rvGallery = findViewById(R.id.rvGallery)
+        bottomNav = findViewById(R.id.bottomNavigationView)
+    }
+
     private fun setupToolbar() {
         val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -64,8 +72,7 @@ class GalleryActivity : BaseActivity() {
     }
 
     private fun setupRecyclerView() {
-        rvGallery = findViewById(R.id.rvGallery)
-        
+
         adapter = GalleryAdapter(
             onItemClick = { item ->
                 openRouteDetail(item.id)
@@ -82,7 +89,6 @@ class GalleryActivity : BaseActivity() {
     }
 
     private fun setupBottomNavigation() {
-        bottomNav = findViewById(R.id.bottomNavigationView)
         bottomNav.selectedItemId = R.id.nav_gallery
 
         bottomNav.setOnItemSelectedListener { item ->

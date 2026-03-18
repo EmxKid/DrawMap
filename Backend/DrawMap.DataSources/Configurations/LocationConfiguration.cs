@@ -12,5 +12,13 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
 
         builder.Property(l => l.Id)
             .IsRequired();
+
+        builder.Property(l => l.RouteId)
+            .IsRequired();
+
+        builder.HasOne<Route>()
+            .WithMany()
+            .HasForeignKey(l => l.RouteId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

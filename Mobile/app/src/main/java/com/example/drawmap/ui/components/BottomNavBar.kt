@@ -15,21 +15,20 @@ class BottomNavBar @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
-    private val bottomNav: BottomNavigationView
+    // Надуваем разметку (создаём BottomNavigationView программно)
+    private val bottomNav: BottomNavigationView = BottomNavigationView(context).apply {
+        inflateMenu(R.menu.bottom_nav_menu)
+        setBackgroundColor(context.getColor(R.color.white))
+        itemIconTintList = context.getColorStateList(R.color.theme2)
+        itemTextColor = context.getColorStateList(R.color.theme2)
+        itemActiveIndicatorColor = ColorStateList.valueOf(Color.TRANSPARENT)
+        labelVisibilityMode = BottomNavigationView.LABEL_VISIBILITY_LABELED
+    }
 
     // Callback для обработки выбора пункта меню
     private var onItemSelected: ((itemId: Int) -> Boolean)? = null
 
     init {
-        // Надуваем разметку (создаём BottomNavigationView программно)
-        bottomNav = BottomNavigationView(context).apply {
-            inflateMenu(R.menu.bottom_nav_menu)
-            setBackgroundColor(context.getColor(R.color.white))
-            itemIconTintList = context.getColorStateList(R.color.theme2)
-            itemTextColor = context.getColorStateList(R.color.theme2)
-            itemActiveIndicatorColor = ColorStateList.valueOf(Color.TRANSPARENT)
-            labelVisibilityMode = BottomNavigationView.LABEL_VISIBILITY_LABELED
-        }
         addView(bottomNav, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
     }
 

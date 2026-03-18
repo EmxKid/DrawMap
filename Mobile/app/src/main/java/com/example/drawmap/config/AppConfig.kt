@@ -1,5 +1,7 @@
 package com.example.drawmap.config
 
+import org.osmdroid.util.GeoPoint
+
 /**
  * Централизованная конфигурация приложения
  */
@@ -27,7 +29,8 @@ object AppConfig {
         const val WRITE_TIMEOUT = 30_000L
         
         // Таймаут для проверки доступности API (в миллисекундах)
-        const val API_CHECK_TIMEOUT = 5_000
+        // Уменьшен для более быстрой проверки при старте
+        const val API_CHECK_TIMEOUT = 3_000
     }
     
     /**
@@ -41,6 +44,10 @@ object AppConfig {
         
         const val MAX_RETRY_ATTEMPTS = 3
         const val RETRY_DELAY_MS = 1000L
+    }
+
+    object GeoPosition {
+        val DEFAULT_GEO_POSITION = GeoPoint(56.4977, 84.9744)
     }
     
     /**

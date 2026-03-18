@@ -1,4 +1,4 @@
-package com.example.drawmap.ui.route
+package com.example.drawmap.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

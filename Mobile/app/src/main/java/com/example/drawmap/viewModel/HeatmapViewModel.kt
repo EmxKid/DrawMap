@@ -1,20 +1,26 @@
-package com.example.drawmap.ui.heatmap
+package com.example.drawmap.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.drawmap.di.ServiceLocator
+import com.example.drawmap.ui.heatmap.HeatmapPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.osmdroid.util.GeoPoint
 
 class HeatmapViewModel : ViewModel() {
     
     private val heatmapRepository = ServiceLocator.provideHeatmapRepository()
     
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
+
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
-    
+
+    private val _userLocation = MutableStateFlow<GeoPoint?>(null)
+    val userLocation: StateFlow<GeoPoint?> = _userLocation.asStateFlow()
+
     /**
      * Загрузить данные тепловой карты
      */
@@ -30,7 +36,7 @@ class HeatmapViewModel : ViewModel() {
                 } else {
                     _uiState.value = UiState.Success(points)
                 }
-                
+
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(
                     message = e.message ?: "Ошибка загрузки данных"
@@ -38,14 +44,14 @@ class HeatmapViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
-     * Перезагрузить данные
+     * Обновление текущего местоположения пользователя
      */
-    fun refresh() {
-        loadHeatmapData()
+    fun updateUserLocation(latitude: Double, longitude: Double) {
+        _userLocation.value = GeoPoint(latitude, longitude)
     }
-    
+
     /**
      * Состояния UI для тепловой карты
      */

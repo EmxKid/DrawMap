@@ -1,5 +1,6 @@
 package com.example.drawmap.ui.base
 
+import android.content.Context
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope

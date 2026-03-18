@@ -3,7 +3,7 @@ package com.example.drawmap.ui.navigation
 import android.content.Context
 import android.content.Intent
 import com.example.drawmap.ui.gallery.GalleryActivity
-import com.example.drawmap.ui.heatmap.HeatmapActivity
+import com.example.drawmap.ui.HeatMap.HeatmapActivity
 import com.example.drawmap.ui.home.HomeActivity
 import com.example.drawmap.ui.splash.SplashActivity
 
